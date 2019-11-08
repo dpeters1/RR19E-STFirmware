@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=C:/Users/T460/Documents/STM32_Projects/DK-testing/Inc
+HeaderPath=C:/Users/T460/Documents/STM32_Projects/RR20E-STFirmware/DK-testing/Inc
 HeaderFiles=usb_host.h;usbh_conf.h;usbh_platform.h;stm32f4xx_it.h;stm32f4xx_hal_conf.h;main.h;
-SourcePath=C:/Users/T460/Documents/STM32_Projects/DK-testing/Src
+SourcePath=C:/Users/T460/Documents/STM32_Projects/RR20E-STFirmware/DK-testing/Src
 SourceFiles=usb_host.c;usbh_conf.c;usbh_platform.c;stm32f4xx_it.c;stm32f4xx_hal_msp.c;main.c;
 
 [PreviousLibFiles]
