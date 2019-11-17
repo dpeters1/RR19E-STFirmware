@@ -60,6 +60,14 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define CS_I2C_SPI_Pin GPIO_PIN_3
 #define CS_I2C_SPI_GPIO_Port GPIOE
+#define CAR_MC_ENABLE_Pin GPIO_PIN_4
+#define CAR_MC_ENABLE_GPIO_Port GPIOE
+#define CAR_IMD_FAULT_Pin GPIO_PIN_5
+#define CAR_IMD_FAULT_GPIO_Port GPIOE
+#define CAR_MC_RTD_Pin GPIO_PIN_6
+#define CAR_MC_RTD_GPIO_Port GPIOE
+#define CAR_BMS_FAULT_Pin GPIO_PIN_13
+#define CAR_BMS_FAULT_GPIO_Port GPIOC
 #define PC14_OSC32_IN_Pin GPIO_PIN_14
 #define PC14_OSC32_IN_GPIO_Port GPIOC
 #define PC15_OSC32_OUT_Pin GPIO_PIN_15
@@ -84,6 +92,10 @@ void Error_Handler(void);
 #define SPI1_MOSI_GPIO_Port GPIOA
 #define BOOT1_Pin GPIO_PIN_2
 #define BOOT1_GPIO_Port GPIOB
+#define CAR_CTRL_POWER_MC_Pin GPIO_PIN_8
+#define CAR_CTRL_POWER_MC_GPIO_Port GPIOE
+#define CAR_CTRL_POWER_BMS_Pin GPIO_PIN_10
+#define CAR_CTRL_POWER_BMS_GPIO_Port GPIOE
 #define CLK_IN_Pin GPIO_PIN_10
 #define CLK_IN_GPIO_Port GPIOB
 #define LD4_Pin GPIO_PIN_12
@@ -96,6 +108,10 @@ void Error_Handler(void);
 #define LD6_GPIO_Port GPIOD
 #define I2S3_MCK_Pin GPIO_PIN_7
 #define I2S3_MCK_GPIO_Port GPIOC
+#define CAR_BRAKE_Pin GPIO_PIN_8
+#define CAR_BRAKE_GPIO_Port GPIOC
+#define CAR_THROTTLE_Pin GPIO_PIN_9
+#define CAR_THROTTLE_GPIO_Port GPIOC
 #define VBUS_FS_Pin GPIO_PIN_9
 #define VBUS_FS_GPIO_Port GPIOA
 #define OTG_FS_ID_Pin GPIO_PIN_10
@@ -116,10 +132,18 @@ void Error_Handler(void);
 #define Audio_RST_GPIO_Port GPIOD
 #define OTG_FS_OverCurrent_Pin GPIO_PIN_5
 #define OTG_FS_OverCurrent_GPIO_Port GPIOD
+#define CAR_PRECHG_EN_LO_Pin GPIO_PIN_7
+#define CAR_PRECHG_EN_LO_GPIO_Port GPIOD
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
+#define CAR_VCM_OK_Pin GPIO_PIN_4
+#define CAR_VCM_OK_GPIO_Port GPIOB
+#define CAR_VCM_OKB5_Pin GPIO_PIN_5
+#define CAR_VCM_OKB5_GPIO_Port GPIOB
 #define Audio_SCL_Pin GPIO_PIN_6
 #define Audio_SCL_GPIO_Port GPIOB
+#define CAR_BSPD_FT_Pin GPIO_PIN_7
+#define CAR_BSPD_FT_GPIO_Port GPIOB
 #define Audio_SDA_Pin GPIO_PIN_9
 #define Audio_SDA_GPIO_Port GPIOB
 #define MEMS_INT2_Pin GPIO_PIN_1
