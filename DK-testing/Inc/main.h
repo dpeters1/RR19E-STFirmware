@@ -70,6 +70,7 @@ void Error_Handler(void);
 #define CAR_MC_RTD_GPIO_Port GPIOE
 #define CAR_BMS_FAULT_Pin GPIO_PIN_13
 #define CAR_BMS_FAULT_GPIO_Port GPIOC
+#define CAR_BMS_FAULT_EXTI_IRQn EXTI15_10_IRQn
 #define PC14_OSC32_IN_Pin GPIO_PIN_14
 #define PC14_OSC32_IN_GPIO_Port GPIOC
 #define PC15_OSC32_OUT_Pin GPIO_PIN_15
@@ -82,8 +83,6 @@ void Error_Handler(void);
 #define OTG_FS_PowerSwitchOn_GPIO_Port GPIOC
 #define PDM_OUT_Pin GPIO_PIN_3
 #define PDM_OUT_GPIO_Port GPIOC
-#define B1_Pin GPIO_PIN_0
-#define B1_GPIO_Port GPIOA
 #define I2S3_WS_Pin GPIO_PIN_4
 #define I2S3_WS_GPIO_Port GPIOA
 #define SPI1_SCK_Pin GPIO_PIN_5
