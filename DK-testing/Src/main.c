@@ -48,6 +48,8 @@ I2S_HandleTypeDef hi2s3;
 
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim3;
+
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -58,6 +60,7 @@ static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_I2S3_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 extern void initialise_monitor_handles(void);
 /* USER CODE END PFP */
@@ -99,19 +102,48 @@ int main(void)
   MX_I2C1_Init();
   MX_I2S3_Init();
   MX_SPI1_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
+  //Power to BMS and MC
   HAL_GPIO_WritePin(GPIOD, LD4_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOE, CAR_CTRL_POWER_MC_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOE, CAR_CTRL_POWER_BMS_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(CAR_CTRL_POWER_MC_GPIO_Port, CAR_CTRL_POWER_MC_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(CAR_CTRL_POWER_BMS_GPIO_Port, CAR_CTRL_POWER_BMS_Pin, GPIO_PIN_SET);
+
+  //Wait until no faults
+  while(HAL_GPIO_ReadPin(CAR_BMS_FAULT_GPIO_Port, CAR_BMS_FAULT_Pin) && HAL_GPIO_ReadPin(CAR_IMD_FAULT_GPIO_Port , CAR_IMD_FAULT_Pin) == 0);
+
+  //VCM ok
+  HAL_GPIO_WritePin(CAR_VCM_OK_GPIO_Port ,CAR_VCM_OK_Pin, GPIO_PIN_SET);
+
+  //precharge delay
+  HAL_Delay(1000);
+
+  HAL_GPIO_WritePin(CAR_IMD_PRECHARGE_GPIO_Port , CAR_IMD_PRECHARGE_Pin, GPIO_PIN_SET);
+
+//enable MC
+
+  HAL_GPIO_WritePin(CAR_MC_ENABLE_GPIO_Port , CAR_MC_ENABLE_Pin, GPIO_PIN_SET);
+
 
   HAL_Delay(500);
-  HAL_GPIO_WritePin(GPIOE, CAR_MC_ENABLE_Pin, GPIO_PIN_SET);
 
-  while(HAL_GPIO_ReadPin(CAR_MC_RTD_GPIO_Port, CAR_MC_RTD_Pin) == 0);
+  while(HAL_GPIO_ReadPin(CAR_MC_RTD_GPIO_Port,  CAR_MC_RTD_Pin) == 0);
+
 
   printf("Ready to drive\n");
 
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 420;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
 
   /* USER CODE END 2 */
 
@@ -283,6 +315,55 @@ static void MX_SPI1_Init(void)
 }
 
 /**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 19;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 840;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+  HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -307,10 +388,10 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, LD4_Pin|LD3_Pin|LD5_Pin|LD6_Pin 
-                          |Audio_RST_Pin, GPIO_PIN_RESET);
+                          |Audio_RST_Pin|CAR_IMD_PRECHARGE_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, CAR_VCM_OK_Pin|CAR_VCM_OKB5_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(CAR_VCM_OK_GPIO_Port, CAR_VCM_OK_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : CS_I2C_SPI_Pin CAR_MC_ENABLE_Pin CAR_CTRL_POWER_MC_Pin CAR_CTRL_POWER_BMS_Pin */
   GPIO_InitStruct.Pin = CS_I2C_SPI_Pin|CAR_MC_ENABLE_Pin|CAR_CTRL_POWER_MC_Pin|CAR_CTRL_POWER_BMS_Pin;
@@ -319,17 +400,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : CAR_IMD_FAULT_Pin */
-  GPIO_InitStruct.Pin = CAR_IMD_FAULT_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(CAR_IMD_FAULT_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : CAR_MC_RTD_Pin */
-  GPIO_InitStruct.Pin = CAR_MC_RTD_Pin;
+  /*Configure GPIO pins : CAR_IMD_FAULT_Pin CAR_MC_RTD_Pin */
+  GPIO_InitStruct.Pin = CAR_IMD_FAULT_Pin|CAR_MC_RTD_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  HAL_GPIO_Init(CAR_MC_RTD_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pin : CAR_BMS_FAULT_Pin */
   GPIO_InitStruct.Pin = CAR_BMS_FAULT_Pin;
@@ -358,11 +433,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BOOT1_Pin CAR_BSPD_FT_Pin */
-  GPIO_InitStruct.Pin = BOOT1_Pin|CAR_BSPD_FT_Pin;
+  /*Configure GPIO pin : BOOT1_Pin */
+  GPIO_InitStruct.Pin = BOOT1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(BOOT1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : CLK_IN_Pin */
   GPIO_InitStruct.Pin = CLK_IN_Pin;
@@ -373,21 +448,13 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(CLK_IN_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LD4_Pin LD3_Pin LD5_Pin LD6_Pin 
-                           Audio_RST_Pin */
+                           Audio_RST_Pin CAR_IMD_PRECHARGE_Pin */
   GPIO_InitStruct.Pin = LD4_Pin|LD3_Pin|LD5_Pin|LD6_Pin 
-                          |Audio_RST_Pin;
+                          |Audio_RST_Pin|CAR_IMD_PRECHARGE_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : CAR_BRAKE_Pin CAR_THROTTLE_Pin */
-  GPIO_InitStruct.Pin = CAR_BRAKE_Pin|CAR_THROTTLE_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : VBUS_FS_Pin */
   GPIO_InitStruct.Pin = VBUS_FS_Pin;
@@ -403,18 +470,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF10_OTG_FS;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : OTG_FS_OverCurrent_Pin CAR_PRECHG_EN_LO_Pin */
-  GPIO_InitStruct.Pin = OTG_FS_OverCurrent_Pin|CAR_PRECHG_EN_LO_Pin;
+  /*Configure GPIO pin : OTG_FS_OverCurrent_Pin */
+  GPIO_InitStruct.Pin = OTG_FS_OverCurrent_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+  HAL_GPIO_Init(OTG_FS_OverCurrent_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : CAR_VCM_OK_Pin CAR_VCM_OKB5_Pin */
-  GPIO_InitStruct.Pin = CAR_VCM_OK_Pin|CAR_VCM_OKB5_Pin;
+  /*Configure GPIO pin : CAR_VCM_OK_Pin */
+  GPIO_InitStruct.Pin = CAR_VCM_OK_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(CAR_VCM_OK_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : MEMS_INT2_Pin */
   GPIO_InitStruct.Pin = MEMS_INT2_Pin;
