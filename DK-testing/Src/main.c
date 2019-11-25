@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -52,6 +53,13 @@ TIM_HandleTypeDef htim3;
 
 /* USER CODE BEGIN PV */
 
+typedef struct {
+	volatile bool STATE_IMD_OK;
+	volatile bool STATE_BMS_OK;
+	volatile bool STATE_ESTOP_OK;
+} vcm_peripheral_state_e;
+
+vcm_peripheral_state_e car_state;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -106,44 +114,60 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   //Power to BMS and MC
-  HAL_GPIO_WritePin(GPIOD, LD4_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(CAR_CTRL_POWER_MC_GPIO_Port, CAR_CTRL_POWER_MC_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(CAR_CTRL_POWER_BMS_GPIO_Port, CAR_CTRL_POWER_BMS_Pin, GPIO_PIN_SET);
+  printf("[Init] MC Powered ON\n");
 
-  //Wait until no faults
-  while(HAL_GPIO_ReadPin(CAR_BMS_FAULT_GPIO_Port, CAR_BMS_FAULT_Pin) && HAL_GPIO_ReadPin(CAR_IMD_FAULT_GPIO_Port , CAR_IMD_FAULT_Pin) == 0);
+  HAL_GPIO_WritePin(CAR_CTRL_POWER_BMS_GPIO_Port, CAR_CTRL_POWER_BMS_Pin, GPIO_PIN_SET);
+  printf("[Init] IMD and BMS Powered ON\n");
+
+
+  //Check Faults
+  printf("[Init] eSTOP State: ");
+  if(HAL_GPIO_ReadPin(CAR_ESTOP_GPIO_Port, CAR_ESTOP_Pin) == GPIO_PIN_SET){
+	  printf("Fault\n");
+	  while(car_state.STATE_ESTOP_OK != true);;
+  }
+  else printf("OK\n");
+
+  printf("[Init] BMS State: ");
+  if(HAL_GPIO_ReadPin(CAR_BMS_FAULTn_GPIO_Port, CAR_BMS_FAULTn_Pin) == GPIO_PIN_RESET){
+	  printf("Fault\n");
+	  while(car_state.STATE_BMS_OK != true);;
+  }
+  else printf("OK\n");
+
+  printf("[Init] IMD State: ");
+  if(HAL_GPIO_ReadPin(CAR_IMD_FAULTn_GPIO_Port, CAR_IMD_FAULTn_Pin) == GPIO_PIN_RESET){
+	  printf("Fault\n");
+	  while(car_state.STATE_IMD_OK != true);;
+  }
+  else printf("OK\n");
 
   //VCM ok
   HAL_GPIO_WritePin(CAR_VCM_OK_GPIO_Port ,CAR_VCM_OK_Pin, GPIO_PIN_SET);
+  printf("[Init] Enabled Battery Contactors\n");
 
-  //precharge delay
+  // Short precharge resistors after 1000ms
   HAL_Delay(1000);
-
   HAL_GPIO_WritePin(CAR_IMD_PRECHARGE_GPIO_Port , CAR_IMD_PRECHARGE_Pin, GPIO_PIN_SET);
+  printf("[Init] Precharge Disabled\n");
 
-//enable MC
-
-  HAL_GPIO_WritePin(CAR_MC_ENABLE_GPIO_Port , CAR_MC_ENABLE_Pin, GPIO_PIN_SET);
-
-
+  //enable MC
   HAL_Delay(500);
+  HAL_GPIO_WritePin(CAR_MC_ENABLE_GPIO_Port , CAR_MC_ENABLE_Pin, GPIO_PIN_SET);
+  printf("[Init] MC Enabled\n");
 
-  while(HAL_GPIO_ReadPin(CAR_MC_RTD_GPIO_Port,  CAR_MC_RTD_Pin) == 0);
+  while(HAL_GPIO_ReadPin(CAR_MC_RTD_GPIO_Port,  CAR_MC_RTD_Pin) == GPIO_PIN_RESET);
+  printf("[Init] Ready to drive\n");
 
 
-  printf("Ready to drive\n");
+  uint16_t motor_speed = 0;
 
   TIM_OC_InitTypeDef sConfigOC = {0};
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 420;
+  sConfigOC.Pulse = motor_speed;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
 
   /* USER CODE END 2 */
 
@@ -151,6 +175,16 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  motor_speed += 20;
+	  sConfigOC.Pulse = motor_speed;
+
+	  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+	  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
+
+	  printf("[Running] Motor Speed: %d \n", motor_speed/(840*100));
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -381,36 +415,42 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, CS_I2C_SPI_Pin|CAR_MC_ENABLE_Pin|CAR_CTRL_POWER_MC_Pin|CAR_CTRL_POWER_BMS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, CS_I2C_SPI_Pin|CAR_MC_ENABLE_Pin|CAR_CTRL_POWER_MC_Pin|CAR_CTRL_POWER_BMS_Pin 
+                          |CAR_IMD_PRECHARGE_Pin|CAR_VCM_OK_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(OTG_FS_PowerSwitchOn_GPIO_Port, OTG_FS_PowerSwitchOn_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, LD4_Pin|LD3_Pin|LD5_Pin|LD6_Pin 
-                          |Audio_RST_Pin|CAR_IMD_PRECHARGE_Pin, GPIO_PIN_RESET);
+                          |Audio_RST_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(CAR_VCM_OK_GPIO_Port, CAR_VCM_OK_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pins : CS_I2C_SPI_Pin CAR_MC_ENABLE_Pin CAR_CTRL_POWER_MC_Pin CAR_CTRL_POWER_BMS_Pin */
-  GPIO_InitStruct.Pin = CS_I2C_SPI_Pin|CAR_MC_ENABLE_Pin|CAR_CTRL_POWER_MC_Pin|CAR_CTRL_POWER_BMS_Pin;
+  /*Configure GPIO pins : CS_I2C_SPI_Pin CAR_MC_ENABLE_Pin CAR_CTRL_POWER_MC_Pin CAR_CTRL_POWER_BMS_Pin 
+                           CAR_IMD_PRECHARGE_Pin CAR_VCM_OK_Pin */
+  GPIO_InitStruct.Pin = CS_I2C_SPI_Pin|CAR_MC_ENABLE_Pin|CAR_CTRL_POWER_MC_Pin|CAR_CTRL_POWER_BMS_Pin 
+                          |CAR_IMD_PRECHARGE_Pin|CAR_VCM_OK_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : CAR_IMD_FAULT_Pin CAR_MC_RTD_Pin */
-  GPIO_InitStruct.Pin = CAR_IMD_FAULT_Pin|CAR_MC_RTD_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : CAR_BMS_FAULT_Pin */
-  GPIO_InitStruct.Pin = CAR_BMS_FAULT_Pin;
+  /*Configure GPIO pin : CAR_IMD_FAULTn_Pin */
+  GPIO_InitStruct.Pin = CAR_IMD_FAULTn_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  HAL_GPIO_Init(CAR_BMS_FAULT_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(CAR_IMD_FAULTn_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : CAR_MC_RTD_Pin */
+  GPIO_InitStruct.Pin = CAR_MC_RTD_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(CAR_MC_RTD_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : CAR_BMS_FAULTn_Pin */
+  GPIO_InitStruct.Pin = CAR_BMS_FAULTn_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(CAR_BMS_FAULTn_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : OTG_FS_PowerSwitchOn_Pin */
   GPIO_InitStruct.Pin = OTG_FS_PowerSwitchOn_Pin;
@@ -427,11 +467,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
   HAL_GPIO_Init(PDM_OUT_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  /*Configure GPIO pin : DK_BUTTON_Pin */
+  GPIO_InitStruct.Pin = DK_BUTTON_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(DK_BUTTON_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : BOOT1_Pin */
   GPIO_InitStruct.Pin = BOOT1_Pin;
@@ -448,9 +488,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(CLK_IN_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LD4_Pin LD3_Pin LD5_Pin LD6_Pin 
-                           Audio_RST_Pin CAR_IMD_PRECHARGE_Pin */
+                           Audio_RST_Pin */
   GPIO_InitStruct.Pin = LD4_Pin|LD3_Pin|LD5_Pin|LD6_Pin 
-                          |Audio_RST_Pin|CAR_IMD_PRECHARGE_Pin;
+                          |Audio_RST_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -476,12 +516,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(OTG_FS_OverCurrent_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : CAR_VCM_OK_Pin */
-  GPIO_InitStruct.Pin = CAR_VCM_OK_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(CAR_VCM_OK_GPIO_Port, &GPIO_InitStruct);
+  /*Configure GPIO pin : CAR_ESTOP_Pin */
+  GPIO_InitStruct.Pin = CAR_ESTOP_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(CAR_ESTOP_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : MEMS_INT2_Pin */
   GPIO_InitStruct.Pin = MEMS_INT2_Pin;
@@ -493,6 +532,9 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
@@ -500,7 +542,47 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-	printf("Button Pressed\n");
+
+	bool event_ok;
+
+	switch(GPIO_Pin){
+	case DK_BUTTON_Pin:
+		if(HAL_GPIO_ReadPin(DK_BUTTON_GPIO_Port, DK_BUTTON_Pin) == 0){
+			printf("[Interrupt] Button Pressed\n");
+		}
+		else printf("[Interrupt] Button Released\n");
+		break;
+
+	case CAR_ESTOP_Pin:
+		event_ok = HAL_GPIO_ReadPin(CAR_ESTOP_GPIO_Port, CAR_ESTOP_Pin) ? false:true;
+		if(event_ok != car_state.STATE_ESTOP_OK){
+			car_state.STATE_ESTOP_OK = event_ok;
+			if(car_state.STATE_ESTOP_OK == true) printf("[Interrupt] eStop Released\n");
+			else printf("[Interrupt] eStop Pressed\n");
+		}
+		break;
+
+	case CAR_BMS_FAULTn_Pin:
+		event_ok = HAL_GPIO_ReadPin(CAR_BMS_FAULTn_GPIO_Port, CAR_BMS_FAULTn_Pin) ? true:false;
+		if(event_ok != car_state.STATE_BMS_OK){
+			car_state.STATE_BMS_OK = event_ok;
+			if(car_state.STATE_BMS_OK == true) printf("[Interrupt] BMS Fault Cleared\n");
+			else printf("[Interrupt] BMS Fault Set\n");
+		}
+		break;
+
+	case CAR_IMD_FAULTn_Pin:
+		event_ok = HAL_GPIO_ReadPin(CAR_IMD_FAULTn_GPIO_Port, CAR_IMD_FAULTn_Pin) ? true:false;
+		if(event_ok != car_state.STATE_IMD_OK){
+			car_state.STATE_IMD_OK = event_ok;
+			if(car_state.STATE_IMD_OK == true) printf("[Interrupt] IMD Fault Cleared\n");
+			else printf("[Interrupt] IMD Fault Set\n");
+		}
+		break;
+
+	default:
+		printf("[Interrupt] Pin %d interrupt unhandled", GPIO_Pin);
+	}
 }
 /* USER CODE END 4 */
 
