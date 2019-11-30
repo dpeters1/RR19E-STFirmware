@@ -87,6 +87,8 @@ void Error_Handler(void);
 #define DK_BUTTON_Pin GPIO_PIN_0
 #define DK_BUTTON_GPIO_Port GPIOA
 #define DK_BUTTON_EXTI_IRQn EXTI0_IRQn
+#define CAR_THROTTLE_INPUT_Pin GPIO_PIN_1
+#define CAR_THROTTLE_INPUT_GPIO_Port GPIOA
 #define I2S3_WS_Pin GPIO_PIN_4
 #define I2S3_WS_GPIO_Port GPIOA
 #define SPI1_SCK_Pin GPIO_PIN_5

@@ -34,7 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define THROTTLE_IDLE_THRESHOLD 100 // 100 / 4096 = 2.5%
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -43,6 +43,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
 I2C_HandleTypeDef hi2c1;
 
 I2S_HandleTypeDef hi2s3;
@@ -59,6 +61,8 @@ typedef struct {
 	volatile bool STATE_ESTOP_OK;
 } vcm_peripheral_state_e;
 
+volatile uint32_t throttle_filtered;
+
 vcm_peripheral_state_e car_state;
 /* USER CODE END PV */
 
@@ -69,8 +73,12 @@ static void MX_I2C1_Init(void);
 static void MX_I2S3_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
 extern void initialise_monitor_handles(void);
+
+static void CAR_read_throttle();
+static void CAR_set_speed(uint32_t speed_percent);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -111,6 +119,7 @@ int main(void)
   MX_I2S3_Init();
   MX_SPI1_Init();
   MX_TIM3_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 
   //Power to BMS and MC
@@ -123,21 +132,24 @@ int main(void)
 
   //Check Faults
   printf("[Init] eSTOP State: ");
-  if(HAL_GPIO_ReadPin(CAR_ESTOP_GPIO_Port, CAR_ESTOP_Pin) == GPIO_PIN_SET){
+  car_state.STATE_ESTOP_OK = !HAL_GPIO_ReadPin(CAR_ESTOP_GPIO_Port, CAR_ESTOP_Pin);
+  if(car_state.STATE_ESTOP_OK == false){
 	  printf("Fault\n");
 	  while(car_state.STATE_ESTOP_OK != true);;
   }
   else printf("OK\n");
 
   printf("[Init] BMS State: ");
-  if(HAL_GPIO_ReadPin(CAR_BMS_FAULTn_GPIO_Port, CAR_BMS_FAULTn_Pin) == GPIO_PIN_RESET){
+  car_state.STATE_BMS_OK = HAL_GPIO_ReadPin(CAR_BMS_FAULTn_GPIO_Port, CAR_BMS_FAULTn_Pin);
+  if(car_state.STATE_BMS_OK == false){
 	  printf("Fault\n");
 	  while(car_state.STATE_BMS_OK != true);;
   }
   else printf("OK\n");
 
   printf("[Init] IMD State: ");
-  if(HAL_GPIO_ReadPin(CAR_IMD_FAULTn_GPIO_Port, CAR_IMD_FAULTn_Pin) == GPIO_PIN_RESET){
+  car_state.STATE_IMD_OK = HAL_GPIO_ReadPin(CAR_IMD_FAULTn_GPIO_Port, CAR_IMD_FAULTn_Pin);
+  if(car_state.STATE_IMD_OK == false){
 	  printf("Fault\n");
 	  while(car_state.STATE_IMD_OK != true);;
   }
@@ -152,6 +164,14 @@ int main(void)
   HAL_GPIO_WritePin(CAR_IMD_PRECHARGE_GPIO_Port , CAR_IMD_PRECHARGE_Pin, GPIO_PIN_SET);
   printf("[Init] Precharge Disabled\n");
 
+  HAL_ADC_Start(&hadc1);
+  for(uint8_t i=0;i<50;i++){
+	  // Fill up the IIR filter with initial values
+	  CAR_read_throttle();
+  }
+  if(throttle_filtered > THROTTLE_IDLE_THRESHOLD) printf("[Init] Return throttle to idle\n");
+  while(throttle_filtered > THROTTLE_IDLE_THRESHOLD) CAR_read_throttle();
+
   //enable MC
   HAL_Delay(500);
   HAL_GPIO_WritePin(CAR_MC_ENABLE_GPIO_Port , CAR_MC_ENABLE_Pin, GPIO_PIN_SET);
@@ -160,31 +180,32 @@ int main(void)
   while(HAL_GPIO_ReadPin(CAR_MC_RTD_GPIO_Port,  CAR_MC_RTD_Pin) == GPIO_PIN_RESET);
   printf("[Init] Ready to drive\n");
 
-
-  uint16_t motor_speed = 0;
-
-  TIM_OC_InitTypeDef sConfigOC = {0};
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = motor_speed;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  motor_speed += 20;
-	  sConfigOC.Pulse = motor_speed;
+	  if(car_state.STATE_BMS_OK && car_state.STATE_IMD_OK && car_state.STATE_ESTOP_OK){
+		  CAR_read_throttle();
 
-	  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
-	  {
-	    Error_Handler();
+		  uint8_t mc_speed_percent = throttle_filtered / 41;
+		  CAR_set_speed(mc_speed_percent);
+
+		  // Limit print output
+		  static uint8_t i=0;
+		  if(i++ == 50){
+			  printf("[Running] Throttle: %d \n", mc_speed_percent);
+			  i = 0;
+		  }
 	  }
-	  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
+	  else{
+		  printf("[Fault] Exiting Run State\n");
+		  CAR_set_speed(0);
+		  HAL_GPIO_WritePin(CAR_VCM_OK_GPIO_Port ,CAR_VCM_OK_Pin, GPIO_PIN_RESET);
 
-	  printf("[Running] Motor Speed: %d \n", motor_speed/(840*100));
+		  return 1;
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -240,6 +261,56 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SEQ_CONV;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  */
+  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
@@ -583,6 +654,29 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	default:
 		printf("[Interrupt] Pin %d interrupt unhandled", GPIO_Pin);
 	}
+}
+
+static void CAR_read_throttle(){
+	HAL_ADC_PollForConversion(&hadc1, 1000);
+	uint32_t throttle_reading = HAL_ADC_GetValue(&hadc1);
+	throttle_filtered = (15*throttle_filtered + throttle_reading) >> 4;
+}
+
+static void CAR_set_speed(uint32_t speed_percent){
+	static TIM_OC_InitTypeDef sConfigOC = {	.OCMode = TIM_OCMODE_PWM1,
+											.Pulse = 0,
+											.OCPolarity = TIM_OCPOLARITY_HIGH,
+											.OCFastMode = TIM_OCFAST_DISABLE
+											};
+
+	if(speed_percent > 100) sConfigOC.Pulse = 0;
+	else sConfigOC.Pulse = (uint32_t)(speed_percent * 8.4);
+
+	if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+	{
+	Error_Handler();
+	}
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
 }
 /* USER CODE END 4 */
 
