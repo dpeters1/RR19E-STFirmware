@@ -34,6 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define THROTTLE_MIN_STOP 650
 #define THROTTLE_IDLE_THRESHOLD 100 // 100 / 4096 = 2.5%
 /* USER CODE END PD */
 
@@ -157,12 +158,13 @@ int main(void)
 
   //VCM ok
   HAL_GPIO_WritePin(CAR_VCM_OK_GPIO_Port ,CAR_VCM_OK_Pin, GPIO_PIN_SET);
-  printf("[Init] Enabled Battery Contactors\n");
+  printf("[Init] Closed HV Battery Contactors\n");
 
   // Short precharge resistors after 1000ms
+  printf("[Init] Precharging...\n")
   HAL_Delay(1000);
   HAL_GPIO_WritePin(CAR_IMD_PRECHARGE_GPIO_Port , CAR_IMD_PRECHARGE_Pin, GPIO_PIN_SET);
-  printf("[Init] Precharge Disabled\n");
+  printf("[Init] Precharge Complete\n");
 
   HAL_ADC_Start(&hadc1);
   for(uint8_t i=0;i<50;i++){
@@ -173,6 +175,10 @@ int main(void)
   while(throttle_filtered > THROTTLE_IDLE_THRESHOLD) CAR_read_throttle();
 
   //enable MC
+  bool rtd = HAL_GPIO_ReadPin(CAR_MC_RTD_GPIO_Port,  CAR_MC_RTD_Pin);
+
+  if(rtd) printf("Ready to drive Fault\n");
+
   HAL_Delay(500);
   HAL_GPIO_WritePin(CAR_MC_ENABLE_GPIO_Port , CAR_MC_ENABLE_Pin, GPIO_PIN_SET);
   printf("[Init] MC Enabled\n");
@@ -658,7 +664,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 
 static void CAR_read_throttle(){
 	HAL_ADC_PollForConversion(&hadc1, 1000);
-	uint32_t throttle_reading = HAL_ADC_GetValue(&hadc1);
+	uint32_t throttle_reading = HAL_ADC_GetValue(&hadc1) - THROTTLE_MIN_STOP;
 	throttle_filtered = (15*throttle_filtered + throttle_reading) >> 4;
 }
 
