@@ -161,7 +161,7 @@ int main(void)
   printf("[Init] Closed HV Battery Contactors\n");
 
   // Short precharge resistors after 1000ms
-  printf("[Init] Precharging...\n")
+  printf("[Init] Precharging...\n");
   HAL_Delay(1000);
   HAL_GPIO_WritePin(CAR_IMD_PRECHARGE_GPIO_Port , CAR_IMD_PRECHARGE_Pin, GPIO_PIN_SET);
   printf("[Init] Precharge Complete\n");
@@ -175,10 +175,6 @@ int main(void)
   while(throttle_filtered > THROTTLE_IDLE_THRESHOLD) CAR_read_throttle();
 
   //enable MC
-  bool rtd = HAL_GPIO_ReadPin(CAR_MC_RTD_GPIO_Port,  CAR_MC_RTD_Pin);
-
-  if(rtd) printf("Ready to drive Fault\n");
-
   HAL_Delay(500);
   HAL_GPIO_WritePin(CAR_MC_ENABLE_GPIO_Port , CAR_MC_ENABLE_Pin, GPIO_PIN_SET);
   printf("[Init] MC Enabled\n");
