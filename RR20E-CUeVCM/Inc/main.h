@@ -37,7 +37,13 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+//#define DEBUG
 
+#ifdef DEBUG
+#define printd(x) printf(x)
+#else
+#define printd(x) do {} while (0)
+#endif
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

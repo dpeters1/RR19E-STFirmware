@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -94,9 +94,12 @@ extern void initialise_monitor_handles(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	//initialise_monitor_handles();
+#ifdef DEBUG
+	initialise_monitor_handles();
+#endif
+	printd("CUeVCM Application Init\n");
   /* USER CODE END 1 */
-  //printf("CUeVCM Application Init\n");
+  
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -128,7 +131,7 @@ int main(void)
   MX_TIM9_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  printd("Fault blink test\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
