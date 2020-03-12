@@ -32,12 +32,20 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-//#define DEBUG
+
+/* Uncomment when debugging for printf support */
+#define DEBUG
+
+/* Code snippet to insert in the mx_gpio configuration after re-generating with cubeMX */
+//#ifndef DEBUG
+//  GPIO_InitStruct.Pin |= DBG_LED_Pin;
+//#endif
+/***********************************************/
 
 #ifdef DEBUG
 #define printd(x) printf(x)
@@ -197,7 +205,8 @@ void Error_Handler(void);
 #define MOTOR_CTRL_B_Pin GPIO_PIN_1
 #define MOTOR_CTRL_B_GPIO_Port GPIOE
 /* USER CODE BEGIN Private defines */
-
+#define DBG_LED_GPIO_Port GPIOA
+#define DBG_LED_Pin GPIO_PIN_13
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

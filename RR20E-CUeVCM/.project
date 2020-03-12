@@ -25,6 +25,10 @@
 		<nature>fr.ac6.mcu.ide.core.MCUProjectNature</nature>
 	</natures>
 	<linkedResources>
-		
+		<link>
+			<name>user_libraries</name>
+			<type>2</type>
+			<location>PROJECT_LOC/user_libraries</location>
+		</link>
 	</linkedResources>
 </projectDescription>
