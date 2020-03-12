@@ -21,9 +21,25 @@ void BSP_fault_led_on(bool on)
 }
 
 
-void BSP_buzzer_on(bool on)
+void BSP_buzzer_on(bool on, bsp_buzzer_pitch_t pitch)
 {
-	HAL_StatusTypeDef ret_code;
+	if(on){
+		HAL_TIM_Base_DeInit(bsp.tim_buzzer);
+
+		switch(pitch){
+		case BUZZER_PITCH_LOW:
+			bsp.tim_buzzer->Init.Prescaler = 500-1;
+			break;
+		case BUZZER_PITCH_MED:
+				bsp.tim_buzzer->Init.Prescaler = 450-1;
+				break;
+		case BUZZER_PITCH_HIGH:
+				bsp.tim_buzzer->Init.Prescaler = 400-1;
+				break;
+		}
+
+		HAL_TIM_Base_Init(bsp.tim_buzzer);
+	}
 
 	TIM_OC_InitTypeDef sConfigOC;
 	sConfigOC.OCMode = TIM_OCMODE_PWM1;
@@ -31,8 +47,7 @@ void BSP_buzzer_on(bool on)
 	sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
 	sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 
-	// All LEDs off
-	ret_code = HAL_TIM_PWM_ConfigChannel(bsp.tim_buzzer, &sConfigOC, TIM_CHANNEL_1);
+	HAL_TIM_PWM_ConfigChannel(bsp.tim_buzzer, &sConfigOC, TIM_CHANNEL_1);
 
-	if(!ret_code)printd("pwm success\n");
+	HAL_TIM_PWM_Start(bsp.tim_buzzer, TIM_CHANNEL_1);
 }

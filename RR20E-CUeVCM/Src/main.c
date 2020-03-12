@@ -142,7 +142,13 @@ int main(void)
 
   BSP_init(&htim2);
 
-  BSP_buzzer_on(true);
+  BSP_buzzer_on(true, BUZZER_PITCH_LOW);
+  HAL_Delay(250);
+  BSP_buzzer_on(true, BUZZER_PITCH_MED);
+  HAL_Delay(250);
+  BSP_buzzer_on(true, BUZZER_PITCH_HIGH);
+  HAL_Delay(250);
+  BSP_buzzer_on(false, BUZZER_PITCH_HIGH);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -732,6 +738,9 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : LOAD_OUT1_3_Pin LOAD_OUT2_4_Pin LOAD_OUT1_4_Pin */
   GPIO_InitStruct.Pin = LOAD_OUT1_3_Pin|LOAD_OUT2_4_Pin|LOAD_OUT1_4_Pin;
+#ifndef DEBUG
+  GPIO_InitStruct.Pin |= DBG_LED_Pin;
+#endif
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
