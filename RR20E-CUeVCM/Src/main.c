@@ -175,13 +175,23 @@ int main(void)
   //BSP_pin_interrupt_enable(0, INTERRUPT_TOGGLE);
   BSP_analog_out_set(0, 25);
 
-  BT_power_on(true);
+  BT_power_on(true, MODE_NORMAL);
 
-  HAL_Delay(2000);
+  while(BT_get_state() != STATE_CONFIGURATION){
+	  ;;
+  }
 
-  char test_string[] = "testing\r\n";
+  char device_name[] = "CUeVCM BT";
+  BT_set_device_name(device_name);
+  HAL_Delay(100);
+  BT_send_command(BM78_CMD_LEAVE_CFG_MODE, NULL, 0);
 
-  BT_transmit((uint8_t *)test_string, strlen(test_string));
+//  HAL_Delay(600);
+//  BT_send_command(BM78_CMD_READ_LOCAL_INFORMATION, NULL, 0);
+
+//  char test_string[] = "testing\r\n";
+//
+//  BT_transmit((uint8_t *)test_string, strlen(test_string));
 
   scheduler_add(blink_led, NULL, 0, 200);
   /* USER CODE END 2 */
