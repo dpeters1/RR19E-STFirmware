@@ -30,9 +30,11 @@ void BSP_init(bsp_handler_t * p_bsp_handler)
 {
 	bsp = p_bsp_handler;
 
-	if(bsp->adc_anlg_in != NULL) HAL_ADC_Start_IT(bsp->adc_anlg_in);
+	if(bsp->adc_anlg_in != NULL){
+		HAL_ADC_Start_DMA(bsp->adc_anlg_in, adc_readings.analog_inputs, NUM_ANLG_INPUT_CHANNELS);
+	}
 
-	if(bsp->adc_csense != NULL) HAL_ADC_Start_IT(bsp->adc_csense);
+	if(bsp->adc_csense != NULL) HAL_ADC_Start_DMA(bsp->adc_csense, adc_readings.current_sense_mv, OUTPUT_BANK_SIZE+1);
 
 	HAL_GPIO_WritePin(CSENSE_P1_SEL_GPIO_Port, CSENSE_P1_SEL_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(CSENSE_P2_SEL_GPIO_Port, CSENSE_P2_SEL_Pin, GPIO_PIN_SET);
@@ -168,44 +170,29 @@ void HAL_GPIO_EXTI_Callback(uint16_t gpio_pin)
 }
 
 
-static void scheduler_restart_adc(void * adc)
+static void scheduler_restart_adc(void * handle)
 {
-	HAL_ADC_Start_IT((ADC_HandleTypeDef *)adc);
+	HAL_ADC_Start_DMA(bsp->adc_csense, adc_readings.current_sense_mv, OUTPUT_BANK_SIZE+1);
 }
 
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-	if(hadc == bsp->adc_anlg_in){
-		for(uint8_t i = 0; i < hadc->Init.NbrOfConversion; i++){
-			adc_readings.analog_inputs[i] = HAL_ADC_GetValue(hadc);
-		}
-	}
-
 	if(hadc == bsp->adc_csense){
 		// Active bank is the currently active CS_sel pin of the multiplexed output current pins
-		static uint8_t active_bank = 0;
-
-		for(uint8_t i = 0; i < hadc->Init.NbrOfConversion; i++){
-			uint16_t csense_voltage_mv = HAL_ADC_GetValue(hadc) * ADC_REFERENCE_VOLTAGE_MV / 4096;
-			if(csense_voltage_mv > 200){
-				printf("load connected:%d\n", csense_voltage_mv);
-			}
-			adc_readings.output_current[i + (OUTPUT_BANK_SIZE * active_bank)] = csense_voltage_mv;
-		}
-
+//		static uint8_t active_bank = 0;
+//
 //		if(active_bank == 2) active_bank = 0;
 //		else active_bank++;
 //
 //		// Select the correct drive chip current pin
-//		HAL_GPIO_WritePin(CSENSE_P1_SEL_GPIO_Port, CSENSE_P1_SEL_Pin, active_bank == 0 ? GPIO_PIN_SET : GPIO_PIN_RESET);
-//		HAL_GPIO_WritePin(CSENSE_P2_SEL_GPIO_Port, CSENSE_P2_SEL_Pin, active_bank == 1 ? GPIO_PIN_SET : GPIO_PIN_RESET);
-//		HAL_GPIO_WritePin(CSENSE_P3_SEL_GPIO_Port, CSENSE_P3_SEL_Pin, active_bank == 2 ? GPIO_PIN_SET : GPIO_PIN_RESET);
-//
-//		HAL_ADC_Stop_IT(bsp->adc_csense);
-//
-//		// Schedule next current measurement in 5ms to allow reading to settle
-//		SCH_add(scheduler_restart_adc, bsp->adc_csense, 5, 0);
+//		HAL_GPIO_WritePin(CSENSE_P1_SEL_GPIO_Port, CSENSE_P1_SEL_Pin, active_bank == 0 ? GPIO_PIN_RESET : GPIO_PIN_SET);
+//		HAL_GPIO_WritePin(CSENSE_P2_SEL_GPIO_Port, CSENSE_P2_SEL_Pin, active_bank == 1 ? GPIO_PIN_RESET : GPIO_PIN_SET);
+//		HAL_GPIO_WritePin(CSENSE_P3_SEL_GPIO_Port, CSENSE_P3_SEL_Pin, active_bank == 2 ? GPIO_PIN_RESET : GPIO_PIN_SET);
+
+
+		// Schedule next current measurement in 1ms to allow reading to settle
+		SCH_add(scheduler_restart_adc, bsp->adc_csense, 1, 0);
 	}
 }
 

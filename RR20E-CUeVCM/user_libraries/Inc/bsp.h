@@ -66,10 +66,8 @@ typedef struct{
 
 
 typedef struct {
-	uint16_t analog_inputs[NUM_ANLG_INPUT_CHANNELS];
-	uint16_t output_current[NUM_OUTPUT_CHANNELS];
-	uint8_t output_multiplex_line;
-	uint16_t motor_current;
+	uint32_t analog_inputs[NUM_ANLG_INPUT_CHANNELS];
+	uint32_t current_sense_mv[NUM_OUTPUT_CHANNELS+1]; // One additional channel for the motor driver
 } bsp_adc_data_t;
 
 /* Public function prototypes */
