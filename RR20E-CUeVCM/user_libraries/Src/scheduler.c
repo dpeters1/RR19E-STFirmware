@@ -20,7 +20,7 @@ static tTask tasks[MAX_NUM_OF_TASKS];
 static TIM_HandleTypeDef * scheduler_timer;
 
 
-void SCH_init(TIM_HandleTypeDef * tim_handler) {
+void scheduler_init(TIM_HandleTypeDef * tim_handler) {
   for (uint8_t i = 0; i < MAX_NUM_OF_TASKS; i++) {
     tasks[i].delay = 0;
     tasks[i].period = 0;
@@ -33,7 +33,7 @@ void SCH_init(TIM_HandleTypeDef * tim_handler) {
   HAL_TIM_Base_Start_IT(scheduler_timer);
 }
 
-void SCH_add(void (*exec)(void *), void *handle, uint32_t delay, uint32_t period) {
+void scheduler_add(void (*exec)(void *), void *handle, uint32_t delay, uint32_t period) {
   for (uint8_t i = 0; i < MAX_NUM_OF_TASKS; i++) {
     if (tasks[i].exec == NULL) {
       tasks[i].delay = delay;
@@ -46,7 +46,7 @@ void SCH_add(void (*exec)(void *), void *handle, uint32_t delay, uint32_t period
   }
 }
 
-void SCH_del(void (*exec)(void *), void *handle) {
+void scheduler_del(void (*exec)(void *), void *handle) {
   for (uint8_t i = 0; i < MAX_NUM_OF_TASKS; i++) {
     if ((tasks[i].exec == exec) && (tasks[i].handle == handle)) {
       tasks[i].exec = NULL;
@@ -55,7 +55,7 @@ void SCH_del(void (*exec)(void *), void *handle) {
   }
 }
 
-void SCH_exec() {
+void scheduler_exec() {
   for (uint8_t i = 0; i < MAX_NUM_OF_TASKS; i++) {
     if (tasks[i].exec != NULL && tasks[i].run > 0) {
       tasks[i].run--;
@@ -69,7 +69,7 @@ void SCH_exec() {
 
 
 
-void SCH_update() {
+void scheduler_update() {
   for (uint8_t i = 0; i < MAX_NUM_OF_TASKS; i++) {
     if (tasks[i].exec != NULL) {
       if (tasks[i].delay == 0) {

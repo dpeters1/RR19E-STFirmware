@@ -829,9 +829,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     __HAL_RCC_GPIOA_CLK_ENABLE();
     /**USART1 GPIO Configuration    
     PA9     ------> USART1_TX
-    PA10     ------> USART1_RX
-    PA11     ------> USART1_CTS
-    PA12     ------> USART1_RTS 
+    PA10     ------> USART1_RX 
     */
     GPIO_InitStruct.Pin = UART_TX_BT_Pin|UART_RX_BT_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -840,13 +838,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    GPIO_InitStruct.Pin = UART_CTS_BT_Pin|UART_RTS_BT_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
+    /* USART1 interrupt Init */
+    HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(USART1_IRQn);
   /* USER CODE BEGIN USART1_MspInit 1 */
 
   /* USER CODE END USART1_MspInit 1 */
@@ -872,12 +866,12 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
   
     /**USART1 GPIO Configuration    
     PA9     ------> USART1_TX
-    PA10     ------> USART1_RX
-    PA11     ------> USART1_CTS
-    PA12     ------> USART1_RTS 
+    PA10     ------> USART1_RX 
     */
-    HAL_GPIO_DeInit(GPIOA, UART_TX_BT_Pin|UART_RX_BT_Pin|UART_CTS_BT_Pin|UART_RTS_BT_Pin);
+    HAL_GPIO_DeInit(GPIOA, UART_TX_BT_Pin|UART_RX_BT_Pin);
 
+    /* USART1 interrupt DeInit */
+    HAL_NVIC_DisableIRQ(USART1_IRQn);
   /* USER CODE BEGIN USART1_MspDeInit 1 */
 
   /* USER CODE END USART1_MspDeInit 1 */

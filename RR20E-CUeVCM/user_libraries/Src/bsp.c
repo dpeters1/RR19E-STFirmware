@@ -34,7 +34,12 @@ void BSP_init(bsp_handler_t * p_bsp_handler)
 		HAL_ADC_Start_DMA(bsp->adc_anlg_in, adc_readings.analog_input, NUM_ANLG_INPUT_CHANNELS);
 	}
 
-	if(bsp->adc_csense != NULL) HAL_ADC_Start_DMA(bsp->adc_csense, adc_readings.load_current, OUTPUT_BANK_SIZE+1);
+	if(bsp->adc_csense != NULL){
+		HAL_ADC_Start_DMA(bsp->adc_csense, adc_readings.load_current, OUTPUT_BANK_SIZE+1);
+	}
+
+	BSP_analog_out_set(0, 0);
+	BSP_analog_out_set(1, 0);
 }
 
 void BSP_fault_led_on(bool on)
@@ -75,7 +80,7 @@ void BSP_buzzer_on(bool on, bsp_buzzer_pitch_t pitch)
 }
 
 
-void BSP_output_channel_on(uint8_t channel, bool on)
+void BSP_load_channel_on(uint8_t channel, bool on)
 {
 	if(channel > sizeof(output_channel_map)/sizeof(gpio_t)) return;
 
@@ -83,9 +88,14 @@ void BSP_output_channel_on(uint8_t channel, bool on)
 }
 
 
-uint16_t BSP_output_channel_get_current(uint8_t channel)
+uint16_t BSP_load_channel_get_current(uint8_t channel)
 {
-	return 0;
+	if(channel >=  NUM_OUTPUT_CHANNELS) return 0xFFFF;
+	// 3300: 3.3V ADC reference voltage
+	// 4096: 2^12 bits of resolution
+	// 500: Load driver current sense ratio (see datasheet)
+	// 330: Current sense resistor
+	return adc_readings.load_current[channel] * 3300 / 4096 * 500 / 330;
 }
 
 
@@ -95,9 +105,13 @@ void BSP_motor_control(bsp_mtor_side_t side, int8_t duty_cycle)
 }
 
 
-uint16_t BSP_motor_get_current(bsp_mtor_side_t side)
+uint16_t BSP_motor_get_current()
 {
-	return 0;
+	// 3300: 3.3V ADC reference voltage
+	// 4096: 2^12 bits of resolution
+	// 1540: Load driver current sense ratio (see datasheet)
+	// 680: Current sense resistor
+	return adc_readings.motor_current * 3300 / 4096 * 1540 / 680;
 }
 
 
@@ -107,10 +121,22 @@ uint16_t BSP_analog_in_read(uint8_t channel)
 	return 0;
 }
 
-
+/*
+ * Note: The output impedance can be changed by enabling/disabling the output buffer in cubeMX
+ * With unbuffered output, you have a voltage swing nearly between the rails, and an output impedance of 1 Mega-Ohm.
+ * With buffered output, you have 15k output impedance, but reduced swing of up to 200mV at both rails (+200mV .. VRef-200mV
+ */
 void BSP_analog_out_set(uint8_t channel, uint8_t value_percent)
 {
+	if(value_percent > 100) return;
+	if(channel >= NUM_ANLG_OUT_CHANNELS) return;
+	if(bsp->dac_anlg_out == NULL) return;
 
+	uint32_t dac_channel = channel ? DAC_CHANNEL_2 : DAC_CHANNEL_1;
+	uint32_t dac_value = value_percent * (4096/100);
+
+	HAL_DAC_SetValue(bsp->dac_anlg_out, dac_channel, DAC_ALIGN_12B_R, dac_value);
+	HAL_DAC_Start(bsp->dac_anlg_out, dac_channel);
 }
 
 
@@ -191,7 +217,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 
 		HAL_ADC_Stop_DMA(hadc);
 		// Schedule next current measurement in 1ms to allow reading to settle
-		SCH_add(scheduler_restart_adc, &active_bank, 1, 0);
+		scheduler_add(scheduler_restart_adc, &active_bank, 1, 0);
 	}
 }
 

@@ -34,6 +34,7 @@ extern "C" {
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -184,10 +185,6 @@ void Error_Handler(void);
 #define UART_TX_BT_GPIO_Port GPIOA
 #define UART_RX_BT_Pin GPIO_PIN_10
 #define UART_RX_BT_GPIO_Port GPIOA
-#define UART_CTS_BT_Pin GPIO_PIN_11
-#define UART_CTS_BT_GPIO_Port GPIOA
-#define UART_RTS_BT_Pin GPIO_PIN_12
-#define UART_RTS_BT_GPIO_Port GPIOA
 #define PWM_BUZZER_Pin GPIO_PIN_15
 #define PWM_BUZZER_GPIO_Port GPIOA
 #define SPI_SCK_AUX_Pin GPIO_PIN_10

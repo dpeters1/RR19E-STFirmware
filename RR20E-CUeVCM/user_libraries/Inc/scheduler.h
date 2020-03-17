@@ -24,11 +24,11 @@ typedef struct {
 } tTask;
 
 
-void SCH_init(TIM_HandleTypeDef * tim_handler);
-void SCH_add(void (*exec)(void *), void *handle, uint32_t delay, uint32_t period);
-void SCH_del(void (*exec)(void *), void *handle);
-void SCH_exec();
-void SCH_update();
+void scheduler_init(TIM_HandleTypeDef * tim_handler);
+void scheduler_add(void (*exec)(void *), void *handle, uint32_t delay, uint32_t period);
+void scheduler_del(void (*exec)(void *), void *handle);
+void scheduler_exec();
+void scheduler_update();
 
 
 #endif

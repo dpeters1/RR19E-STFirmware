@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include "bsp.h"
 #include "scheduler.h"
+#include "bm78.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -149,14 +150,17 @@ int main(void)
 #endif
 
   // Initialize the scheduler
-  SCH_init(&htim7);
+  scheduler_init(&htim7);
 
   vcm.tim_buzzer = &htim2;
   vcm.tim_motor = &htim9;
   vcm.adc_anlg_in = &hadc2;
   vcm.adc_csense = &hadc1;
+  vcm.dac_anlg_out = &hdac;
   vcm.app_pin_irq_handler = app_pin_irq_handler;
   BSP_init(&vcm);
+
+  BT_init(&huart1);
 
   // Buzzer startup tone
   BSP_buzzer_on(true, BUZZER_PITCH_LOW);
@@ -167,17 +171,26 @@ int main(void)
   HAL_Delay(250);
   BSP_buzzer_on(false, BUZZER_PITCH_HIGH);
 
-  BSP_output_channel_on(0, true);
+  BSP_load_channel_on(0, true);
   //BSP_pin_interrupt_enable(0, INTERRUPT_TOGGLE);
+  BSP_analog_out_set(0, 25);
 
-  SCH_add(blink_led, NULL, 0, 200);
+  BT_power_on(true);
+
+  HAL_Delay(2000);
+
+  char test_string[] = "testing\r\n";
+
+  BT_transmit((uint8_t *)test_string, strlen(test_string));
+
+  scheduler_add(blink_led, NULL, 0, 200);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  SCH_exec();
+	  scheduler_exec();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -784,7 +797,7 @@ static void MX_USART1_UART_Init(void)
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
   huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_RTS_CTS;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart1.Init.OverSampling = UART_OVERSAMPLING_16;
   if (HAL_UART_Init(&huart1) != HAL_OK)
   {
@@ -923,8 +936,9 @@ void app_pin_irq_handler(uint8_t channel, bsp_pin_irq_evt_t evt)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim)
 {
+	// TIM7 is the scheduler timer that runs at 1 kHz
 	// Process the scheduler queue
-	if(htim == &htim7) SCH_update();
+	if(htim == &htim7) scheduler_update();
 }
 
 
@@ -935,9 +949,6 @@ void blink_led(void * handle)
 	BSP_fault_led_on(led_on);
 
 	led_on = !led_on;
-
-	bsp_adc_data_t * data = BSP_get_adc_readings();
-	printf("driver 1 current:%d\n", data->load_current[0]);
 }
 /* USER CODE END 4 */
 

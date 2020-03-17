@@ -16,6 +16,7 @@
 #define NUM_OUTPUT_CHANNELS		12
 #define NUM_INPUT_CHANNELS		8
 #define NUM_ANLG_INPUT_CHANNELS 4
+#define NUM_ANLG_OUT_CHANNELS   2
 
 typedef enum {
 	MTOR_SIDE_HALF_A,
@@ -73,9 +74,11 @@ typedef struct {
 void BSP_init(bsp_handler_t * p_bsp_handler);
 void BSP_fault_led_on(bool on);
 void BSP_buzzer_on(bool on, bsp_buzzer_pitch_t pitch);
-void BSP_output_channel_on(uint8_t channel, bool on);
+void BSP_load_channel_on(uint8_t channel, bool on);
+uint16_t BSP_load_channel_get_current(uint8_t channel);
 void BSP_pin_interrupt_enable(uint8_t channel, bsp_pin_irq_evt_t evt);
 void BSP_pin_interrupt_disable(uint8_t channel);
+void BSP_analog_out_set(uint8_t channel, uint8_t value_percent);
 bsp_adc_data_t * BSP_get_adc_readings();
 
 
