@@ -937,7 +937,7 @@ void blink_led(void * handle)
 	led_on = !led_on;
 
 	bsp_adc_data_t * data = BSP_get_adc_readings();
-	printf("driver 1 current:%d\n", data->current_sense_mv[0]);
+	printf("driver 1 current:%d\n", data->load_current[0]);
 }
 /* USER CODE END 4 */
 

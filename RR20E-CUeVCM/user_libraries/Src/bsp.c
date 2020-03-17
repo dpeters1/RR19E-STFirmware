@@ -31,14 +31,10 @@ void BSP_init(bsp_handler_t * p_bsp_handler)
 	bsp = p_bsp_handler;
 
 	if(bsp->adc_anlg_in != NULL){
-		HAL_ADC_Start_DMA(bsp->adc_anlg_in, adc_readings.analog_inputs, NUM_ANLG_INPUT_CHANNELS);
+		HAL_ADC_Start_DMA(bsp->adc_anlg_in, adc_readings.analog_input, NUM_ANLG_INPUT_CHANNELS);
 	}
 
-	if(bsp->adc_csense != NULL) HAL_ADC_Start_DMA(bsp->adc_csense, adc_readings.current_sense_mv, OUTPUT_BANK_SIZE+1);
-
-	HAL_GPIO_WritePin(CSENSE_P1_SEL_GPIO_Port, CSENSE_P1_SEL_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(CSENSE_P2_SEL_GPIO_Port, CSENSE_P2_SEL_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(CSENSE_P3_SEL_GPIO_Port, CSENSE_P3_SEL_Pin, GPIO_PIN_SET);
+	if(bsp->adc_csense != NULL) HAL_ADC_Start_DMA(bsp->adc_csense, adc_readings.load_current, OUTPUT_BANK_SIZE+1);
 }
 
 void BSP_fault_led_on(bool on)
@@ -170,9 +166,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t gpio_pin)
 }
 
 
-static void scheduler_restart_adc(void * handle)
+static void scheduler_restart_adc(void * p_active_bank)
 {
-	HAL_ADC_Start_DMA(bsp->adc_csense, adc_readings.current_sense_mv, OUTPUT_BANK_SIZE+1);
+	uint8_t active_bank = *(uint8_t *)p_active_bank;
+	uint32_t num_measurements = OUTPUT_BANK_SIZE;
+	if(active_bank == 2) num_measurements++; // Also sample the motor driver current
+	HAL_ADC_Start_DMA(bsp->adc_csense, &(adc_readings.load_current[active_bank*OUTPUT_BANK_SIZE]), num_measurements);
 }
 
 
@@ -180,19 +179,19 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
 	if(hadc == bsp->adc_csense){
 		// Active bank is the currently active CS_sel pin of the multiplexed output current pins
-//		static uint8_t active_bank = 0;
-//
-//		if(active_bank == 2) active_bank = 0;
-//		else active_bank++;
-//
-//		// Select the correct drive chip current pin
-//		HAL_GPIO_WritePin(CSENSE_P1_SEL_GPIO_Port, CSENSE_P1_SEL_Pin, active_bank == 0 ? GPIO_PIN_RESET : GPIO_PIN_SET);
-//		HAL_GPIO_WritePin(CSENSE_P2_SEL_GPIO_Port, CSENSE_P2_SEL_Pin, active_bank == 1 ? GPIO_PIN_RESET : GPIO_PIN_SET);
-//		HAL_GPIO_WritePin(CSENSE_P3_SEL_GPIO_Port, CSENSE_P3_SEL_Pin, active_bank == 2 ? GPIO_PIN_RESET : GPIO_PIN_SET);
+		static uint8_t active_bank = 0;
 
+		if(active_bank == 2) active_bank = 0;
+		else active_bank++;
 
+		// Select the correct drive chip current pin
+		HAL_GPIO_WritePin(CSENSE_P1_SEL_GPIO_Port, CSENSE_P1_SEL_Pin, active_bank == 0 ? GPIO_PIN_RESET : GPIO_PIN_SET);
+		HAL_GPIO_WritePin(CSENSE_P2_SEL_GPIO_Port, CSENSE_P2_SEL_Pin, active_bank == 1 ? GPIO_PIN_RESET : GPIO_PIN_SET);
+		HAL_GPIO_WritePin(CSENSE_P3_SEL_GPIO_Port, CSENSE_P3_SEL_Pin, active_bank == 2 ? GPIO_PIN_RESET : GPIO_PIN_SET);
+
+		HAL_ADC_Stop_DMA(hadc);
 		// Schedule next current measurement in 1ms to allow reading to settle
-		SCH_add(scheduler_restart_adc, bsp->adc_csense, 1, 0);
+		SCH_add(scheduler_restart_adc, &active_bank, 1, 0);
 	}
 }
 

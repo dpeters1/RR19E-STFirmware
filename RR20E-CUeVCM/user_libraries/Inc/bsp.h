@@ -17,8 +17,6 @@
 #define NUM_INPUT_CHANNELS		8
 #define NUM_ANLG_INPUT_CHANNELS 4
 
-#define ADC_REFERENCE_VOLTAGE_MV 3300
-
 typedef enum {
 	MTOR_SIDE_HALF_A,
 	MTOR_SIDE_HALF_B,
@@ -66,8 +64,9 @@ typedef struct{
 
 
 typedef struct {
-	uint32_t analog_inputs[NUM_ANLG_INPUT_CHANNELS];
-	uint32_t current_sense_mv[NUM_OUTPUT_CHANNELS+1]; // One additional channel for the motor driver
+	uint32_t analog_input[NUM_ANLG_INPUT_CHANNELS];
+	uint32_t load_current[NUM_OUTPUT_CHANNELS];
+	uint32_t motor_current;
 } bsp_adc_data_t;
 
 /* Public function prototypes */
