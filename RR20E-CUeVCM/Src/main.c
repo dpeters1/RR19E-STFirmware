@@ -23,8 +23,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
 #include "bsp.h"
+#include "scheduler.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,12 +57,13 @@ SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi3;
 
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim7;
 TIM_HandleTypeDef htim9;
 
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-
+BSP_INSTANCE_DEF(vcm);
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -79,8 +80,11 @@ static void MX_SPI3_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM9_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
 extern void initialise_monitor_handles(void);
+void app_pin_irq_handler(uint8_t channel, bsp_pin_irq_evt_t evt);
+void blink_led(void * handle);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -99,6 +103,7 @@ int main(void)
 	initialise_monitor_handles();
 #endif
 	printd("CUeVCM Application Init\n");
+
   /* USER CODE END 1 */
   
 
@@ -131,6 +136,7 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM9_Init();
   MX_USART1_UART_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
   printd("Fault blink test\n");
 
@@ -138,10 +144,17 @@ int main(void)
   HAL_GPIO_WritePin(DBG_LED_GPIO_Port, DBG_LED_Pin, GPIO_PIN_RESET);
 #endif
 
-  HAL_GPIO_WritePin(LOAD_OUT1_1_GPIO_Port, LOAD_OUT1_1_Pin, GPIO_PIN_SET);
+  // Initialize the scheduler
+  SCH_init(&htim7);
 
-  BSP_init(&htim2);
+  vcm.tim_buzzer = &htim2;
+  vcm.tim_motor = &htim9;
+  vcm.adc_anlg_in = &hadc2;
+  vcm.adc_csense = &hadc1;
+  vcm.app_pin_irq_handler = app_pin_irq_handler;
+  BSP_init(&vcm);
 
+  // Buzzer startup tone
   BSP_buzzer_on(true, BUZZER_PITCH_LOW);
   HAL_Delay(250);
   BSP_buzzer_on(true, BUZZER_PITCH_MED);
@@ -149,16 +162,18 @@ int main(void)
   BSP_buzzer_on(true, BUZZER_PITCH_HIGH);
   HAL_Delay(250);
   BSP_buzzer_on(false, BUZZER_PITCH_HIGH);
+
+  BSP_output_channel_on(0, true);
+  //BSP_pin_interrupt_enable(0, INTERRUPT_TOGGLE);
+
+  SCH_add(blink_led, NULL, 0, 200);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  BSP_fault_led_on(true);
-	  HAL_Delay(500);
-	  BSP_fault_led_on(false);
-	  HAL_Delay(500);
+	  SCH_exec();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -230,24 +245,56 @@ static void MX_ADC1_Init(void)
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV6;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc1.Init.ScanConvMode = DISABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.ScanConvMode = ENABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.NbrOfConversion = 5;
   hadc1.Init.DMAContinuousRequests = DISABLE;
-  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.EOCSelection = ADC_EOC_SEQ_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
     Error_Handler();
   }
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
   */
-  sConfig.Channel = ADC_CHANNEL_0;
+  sConfig.Channel = ADC_CHANNEL_2;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  */
+  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Rank = 2;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  */
+  sConfig.Channel = ADC_CHANNEL_0;
+  sConfig.Rank = 3;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  */
+  sConfig.Channel = ADC_CHANNEL_13;
+  sConfig.Rank = 4;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  */
+  sConfig.Channel = ADC_CHANNEL_12;
+  sConfig.Rank = 5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -280,24 +327,48 @@ static void MX_ADC2_Init(void)
   hadc2.Instance = ADC2;
   hadc2.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV6;
   hadc2.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc2.Init.ScanConvMode = DISABLE;
-  hadc2.Init.ContinuousConvMode = DISABLE;
+  hadc2.Init.ScanConvMode = ENABLE;
+  hadc2.Init.ContinuousConvMode = ENABLE;
   hadc2.Init.DiscontinuousConvMode = DISABLE;
   hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc2.Init.NbrOfConversion = 1;
+  hadc2.Init.NbrOfConversion = 4;
   hadc2.Init.DMAContinuousRequests = DISABLE;
-  hadc2.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc2.Init.EOCSelection = ADC_EOC_SEQ_CONV;
   if (HAL_ADC_Init(&hadc2) != HAL_OK)
   {
     Error_Handler();
   }
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
   */
-  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Channel = ADC_CHANNEL_15;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  */
+  sConfig.Channel = ADC_CHANNEL_9;
+  sConfig.Rank = 2;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  */
+  sConfig.Channel = ADC_CHANNEL_14;
+  sConfig.Rank = 3;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+  */
+  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Rank = 4;
   if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -609,6 +680,44 @@ static void MX_TIM2_Init(void)
 }
 
 /**
+  * @brief TIM7 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM7_Init(void)
+{
+
+  /* USER CODE BEGIN TIM7_Init 0 */
+
+  /* USER CODE END TIM7_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM7_Init 1 */
+
+  /* USER CODE END TIM7_Init 1 */
+  htim7.Instance = TIM7;
+  htim7.Init.Prescaler = 840-1;
+  htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim7.Init.Period = 100-1;
+  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM7_Init 2 */
+
+  /* USER CODE END TIM7_Init 2 */
+
+}
+
+/**
   * @brief TIM9 Initialization Function
   * @param None
   * @retval None
@@ -702,7 +811,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOE, MOTOR_CTRL_A_Pin|MTOR_CSENSE_SEL_Pin|LOAD_OUT2_1_Pin|LOAD_OUT2_3_Pin 
-                          |LOAD_OUT_2_2_Pin|CSENSE_P2_SEL_Pin|LOOAD_OUT3_1_Pin|LOAD_OUT3_2_Pin 
+                          |LOAD_OUT2_2_Pin|CSENSE_P2_SEL_Pin|LOAD_OUT3_1_Pin|LOAD_OUT3_2_Pin 
                           |LOAD_OUT3_3_Pin|MOTOR_CTRL_B_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
@@ -719,10 +828,10 @@ static void MX_GPIO_Init(void)
                           |BT_CFG2_Pin|BT_SW_BTN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : MOTOR_CTRL_A_Pin MTOR_CSENSE_SEL_Pin LOAD_OUT2_1_Pin LOAD_OUT2_3_Pin 
-                           LOAD_OUT_2_2_Pin CSENSE_P2_SEL_Pin LOOAD_OUT3_1_Pin LOAD_OUT3_2_Pin 
+                           LOAD_OUT2_2_Pin CSENSE_P2_SEL_Pin LOAD_OUT3_1_Pin LOAD_OUT3_2_Pin 
                            LOAD_OUT3_3_Pin MOTOR_CTRL_B_Pin */
   GPIO_InitStruct.Pin = MOTOR_CTRL_A_Pin|MTOR_CSENSE_SEL_Pin|LOAD_OUT2_1_Pin|LOAD_OUT2_3_Pin 
-                          |LOAD_OUT_2_2_Pin|CSENSE_P2_SEL_Pin|LOOAD_OUT3_1_Pin|LOAD_OUT3_2_Pin 
+                          |LOAD_OUT2_2_Pin|CSENSE_P2_SEL_Pin|LOAD_OUT3_1_Pin|LOAD_OUT3_2_Pin 
                           |LOAD_OUT3_3_Pin|MOTOR_CTRL_B_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -738,9 +847,6 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : LOAD_OUT1_3_Pin LOAD_OUT2_4_Pin LOAD_OUT1_4_Pin */
   GPIO_InitStruct.Pin = LOAD_OUT1_3_Pin|LOAD_OUT2_4_Pin|LOAD_OUT1_4_Pin;
-#ifndef DEBUG
-  GPIO_InitStruct.Pin |= DBG_LED_Pin;
-#endif
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -776,10 +882,40 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
+void app_pin_irq_handler(uint8_t channel, bsp_pin_irq_evt_t evt)
+{
+	printf("Channel:%d, Event:%d\n", channel, evt);
+}
 
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim)
+{
+	// Process the scheduler queue
+	if(htim == &htim7) SCH_update();
+}
+
+
+void blink_led(void * handle)
+{
+	static bool led_on = false;
+
+	BSP_fault_led_on(led_on);
+
+	led_on = !led_on;
+
+	bsp_adc_data_t * data = BSP_get_adc_readings();
+	printf("driver 1 current:%d\n", data->output_current[0]);
+}
 /* USER CODE END 4 */
 
 /**

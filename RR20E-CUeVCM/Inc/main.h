@@ -33,13 +33,14 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 
 /* Uncomment when debugging for printf support */
-//#define DEBUG
+#define DEBUG
 
 /* Code snippet to insert in the mx_gpio configuration after re-generating with cubeMX */
 //#ifndef DEBUG
@@ -56,7 +57,10 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-
+typedef struct {
+	uint16_t pin;
+	GPIO_TypeDef * port;
+} gpio_t;
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
@@ -122,12 +126,12 @@ void Error_Handler(void);
 #define ANLG_INPUT2_GPIO_Port GPIOB
 #define LOAD_OUT2_3_Pin GPIO_PIN_10
 #define LOAD_OUT2_3_GPIO_Port GPIOE
-#define LOAD_OUT_2_2_Pin GPIO_PIN_11
-#define LOAD_OUT_2_2_GPIO_Port GPIOE
+#define LOAD_OUT2_2_Pin GPIO_PIN_11
+#define LOAD_OUT2_2_GPIO_Port GPIOE
 #define CSENSE_P2_SEL_Pin GPIO_PIN_12
 #define CSENSE_P2_SEL_GPIO_Port GPIOE
-#define LOOAD_OUT3_1_Pin GPIO_PIN_13
-#define LOOAD_OUT3_1_GPIO_Port GPIOE
+#define LOAD_OUT3_1_Pin GPIO_PIN_13
+#define LOAD_OUT3_1_GPIO_Port GPIOE
 #define LOAD_OUT3_2_Pin GPIO_PIN_14
 #define LOAD_OUT3_2_GPIO_Port GPIOE
 #define LOAD_OUT3_3_Pin GPIO_PIN_15
@@ -142,24 +146,34 @@ void Error_Handler(void);
 #define CANBUS_TX_GPIO_Port GPIOB
 #define EXTI8_INPUT_Pin GPIO_PIN_8
 #define EXTI8_INPUT_GPIO_Port GPIOD
+#define EXTI8_INPUT_EXTI_IRQn EXTI9_5_IRQn
 #define EXTI9_INPUT_Pin GPIO_PIN_9
 #define EXTI9_INPUT_GPIO_Port GPIOD
+#define EXTI9_INPUT_EXTI_IRQn EXTI9_5_IRQn
 #define EXTI10_INPUT_Pin GPIO_PIN_10
 #define EXTI10_INPUT_GPIO_Port GPIOD
+#define EXTI10_INPUT_EXTI_IRQn EXTI15_10_IRQn
 #define EXTI11_INPUT_Pin GPIO_PIN_11
 #define EXTI11_INPUT_GPIO_Port GPIOD
+#define EXTI11_INPUT_EXTI_IRQn EXTI15_10_IRQn
 #define EXTI12_INPUT_Pin GPIO_PIN_12
 #define EXTI12_INPUT_GPIO_Port GPIOD
+#define EXTI12_INPUT_EXTI_IRQn EXTI15_10_IRQn
 #define EXTI13_INPUT_Pin GPIO_PIN_13
 #define EXTI13_INPUT_GPIO_Port GPIOD
+#define EXTI13_INPUT_EXTI_IRQn EXTI15_10_IRQn
 #define EXTI14_INPUT_Pin GPIO_PIN_14
 #define EXTI14_INPUT_GPIO_Port GPIOD
+#define EXTI14_INPUT_EXTI_IRQn EXTI15_10_IRQn
 #define EXTI15_INPUT_Pin GPIO_PIN_15
 #define EXTI15_INPUT_GPIO_Port GPIOD
+#define EXTI15_INPUT_EXTI_IRQn EXTI15_10_IRQn
 #define EXTI6_HDR_Pin GPIO_PIN_6
 #define EXTI6_HDR_GPIO_Port GPIOC
+#define EXTI6_HDR_EXTI_IRQn EXTI9_5_IRQn
 #define EXTI7_HDR_Pin GPIO_PIN_7
 #define EXTI7_HDR_GPIO_Port GPIOC
+#define EXTI7_HDR_EXTI_IRQn EXTI9_5_IRQn
 #define HDR_SPI_CS_Pin GPIO_PIN_8
 #define HDR_SPI_CS_GPIO_Port GPIOC
 #define I2C_SDA_AUX_Pin GPIO_PIN_9
