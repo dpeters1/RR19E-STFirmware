@@ -32,25 +32,21 @@ void BT_init(UART_HandleTypeDef * uart_bt){
 
 static void eeprom_enable_config_mode()
 {
-	BT_power_on(false, MODE_EEPROM);
-	HAL_Delay(100);
-
-	BT_power_on(true, MODE_EEPROM);
-	HAL_Delay(1000);
+	if(bm78.mode != MODE_EEPROM) return;
 
 	const uint8_t open_eeprom_command[] = {0x01, 0x03, 0x0c, 0x00};
 	const uint8_t write_enable_config_command[] = {0x01, 0x27, 0xfc, 0x04, 0x03, 0x8b, 0x01, 0x02};
+	const uint8_t write_led_brightness_command[] = {0x01, 0x27, 0xfc, 0x04, 0x01, 0xee, 0x01, 0x2f};
+	const uint8_t write_link_led_solid_command[] = {0x01, 0x27, 0xfc, 0x04, 0x01, 0xf1, 0x01, 0x02};
 
 	HAL_UART_Transmit_IT(bm78.huart, (uint8_t *)open_eeprom_command, sizeof(open_eeprom_command));
-	HAL_Delay(100);
+	HAL_Delay(50);
 	HAL_UART_Transmit_IT(bm78.huart, (uint8_t *)write_enable_config_command, sizeof(write_enable_config_command));
-	HAL_Delay(100);
-
-	BT_power_on(false, MODE_EEPROM);
-	HAL_Delay(100);
-
-	// Restart the module in normal mode
-	BT_power_on(true, MODE_NORMAL);
+	HAL_Delay(50);
+	HAL_UART_Transmit_IT(bm78.huart, (uint8_t *)write_led_brightness_command, sizeof(write_led_brightness_command));
+	HAL_Delay(50);
+	HAL_UART_Transmit_IT(bm78.huart, (uint8_t *)write_link_led_solid_command, sizeof(write_link_led_solid_command));
+	HAL_Delay(50);
 }
 
 
@@ -59,7 +55,18 @@ static void config_status_timeout(void * handle)
 	// No config status received
 	HAL_UART_AbortReceive_IT(bm78.huart);
 
+	BT_power_on(false, MODE_EEPROM);
+	HAL_Delay(100);
+	// Restart the module in eeprom write mode
+	BT_power_on(true, MODE_EEPROM);
+	HAL_Delay(1000);
+
 	eeprom_enable_config_mode();
+
+	BT_power_on(false, MODE_EEPROM);
+	HAL_Delay(100);
+	// Restart the module in normal mode
+	BT_power_on(true, MODE_NORMAL);
 }
 
 void BT_power_on(bool turn_on, BM78_mode_t mode)
@@ -83,6 +90,22 @@ void BT_power_on(bool turn_on, BM78_mode_t mode)
 
 		scheduler_add(config_status_timeout, NULL, BM78_CONFIG_MODE_TIMEOUT_MS, 0);
 	}
+}
+
+
+void BT_enter_setup()
+{
+	if(bm78.state != STATE_POWER_ON) return;
+
+	while(BT_get_state() != STATE_CONFIGURATION){
+	  scheduler_exec();
+	}
+	BT_send_command(BM78_CMD_READ_LOCAL_INFORMATION, NULL, 0);
+}
+
+
+void BT_exit_setup(){
+	BT_send_command(BM78_CMD_LEAVE_CFG_MODE, NULL, 0);
 }
 
 
@@ -125,6 +148,10 @@ void BT_send_command(uint8_t command, uint8_t * params, uint16_t params_len)
 	command_buffer[encoded_len++] = calculate_chksum_byte(&command_buffer[1], message_len + sizeof(message_len));
 
 	HAL_UART_Transmit_IT(bm78.huart, command_buffer, encoded_len);
+
+	// Delay to allow for the module response
+	// Commands are all sent in the setup phase so introducing delays isn't so bad
+	HAL_Delay(10);
 }
 
 

@@ -35,7 +35,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define BLUETOOTH_DEVICE_NAME 	"CUeVCM BT"
+#define BLUETOOTH_PAIRING_PIN 	"6969"
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -177,25 +178,12 @@ int main(void)
 
   BT_power_on(true, MODE_NORMAL);
 
-  while(BT_get_state() != STATE_CONFIGURATION){
-	  scheduler_exec();
-  }
-
-  char device_name[] = "CUeVCM BT";
-  BT_set_device_name(device_name);
-  HAL_Delay(100);
-
+  BT_enter_setup();
   BT_erase_bonds();
-  HAL_Delay(100);
-
-  char pin[] = "2222";
-  BT_set_pin(pin);
-  HAL_Delay(100);
-
+  BT_set_device_name(BLUETOOTH_DEVICE_NAME);
+  BT_set_pin(BLUETOOTH_PAIRING_PIN);
   BT_set_pairing_method(PAIR_METHOD_PIN);
-  HAL_Delay(100);
-
-  BT_send_command(BM78_CMD_LEAVE_CFG_MODE, NULL, 0);
+  BT_exit_setup();
 
 //  HAL_Delay(600);
 //  BT_send_command(BM78_CMD_READ_LOCAL_INFORMATION, NULL, 0);

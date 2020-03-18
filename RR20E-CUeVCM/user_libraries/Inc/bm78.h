@@ -68,6 +68,8 @@ void BT_set_device_name(char * name);
 void BT_set_pairing_method(BM78_pair_method_t pair_method);
 void BT_set_pin(char * pin_code);
 void BT_erase_bonds();
+void BT_enter_setup();
+void BT_exit_setup();
 //void BT_advertise();
 //void BT_stream(uint8_t * buffer, uint16_t len);
 
