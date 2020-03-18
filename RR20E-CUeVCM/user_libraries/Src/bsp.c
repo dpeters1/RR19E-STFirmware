@@ -39,23 +39,23 @@ void BSP_init(bsp_handler_t * p_bsp_handler)
 	}
 
 	// Initialize the  analog outputs to zero
-	BSP_analog_out_set(0, 0);
-	BSP_analog_out_set(1, 0);
+	BSP_set_analog_output(0, 0);
+	BSP_set_analog_output(1, 0);
 
 	// Turn off the buzzer
-	BSP_buzzer_on(false, BUZZER_PITCH_MED);
+	BSP_set_buzzer(LOW, BUZZER_PITCH_MED);
 
 	// Set the motor output to zero
-	BSP_motor_control(MTOR_DIR_FORWARD, 0);
+	BSP_set_motor_output(MTOR_DIR_FORWARD, 0);
 }
 
-void BSP_fault_led_on(bool on)
+void BSP_set_fault_led(BSP_bool_t on)
 {
 	HAL_GPIO_WritePin(OUT_LED_FAULT_GPIO_Port, OUT_LED_FAULT_Pin, on ? GPIO_PIN_SET:GPIO_PIN_RESET);
 }
 
 
-void BSP_buzzer_on(bool on, bsp_buzzer_pitch_t pitch)
+void BSP_set_buzzer(BSP_bool_t on, bsp_buzzer_pitch_t pitch)
 {
 	if(bsp->tim_buzzer == NULL) return;
 
@@ -89,7 +89,7 @@ void BSP_buzzer_on(bool on, bsp_buzzer_pitch_t pitch)
 }
 
 
-void BSP_load_channel_on(uint8_t channel, bool on)
+void BSP_set_load_output(uint8_t channel, BSP_bool_t on)
 {
 	if(channel > sizeof(output_channel_map)/sizeof(gpio_t)) return;
 
@@ -97,7 +97,7 @@ void BSP_load_channel_on(uint8_t channel, bool on)
 }
 
 
-uint16_t BSP_load_channel_get_current(uint8_t channel)
+uint16_t BSP_get_load_current(uint8_t channel)
 {
 	if(channel >=  NUM_OUTPUT_CHANNELS) return 0xFFFF;
 	// 3300: 3.3V ADC reference voltage
@@ -108,7 +108,7 @@ uint16_t BSP_load_channel_get_current(uint8_t channel)
 }
 
 
-void BSP_motor_control(bsp_mtor_direction_t dir, uint8_t duty_cycle)
+void BSP_set_motor_output(bsp_mtor_direction_t dir, uint8_t duty_cycle)
 {
 	if(bsp->tim_motor == NULL) return;
 	if(duty_cycle > 100) return;
@@ -130,7 +130,7 @@ void BSP_motor_control(bsp_mtor_direction_t dir, uint8_t duty_cycle)
 }
 
 
-uint16_t BSP_motor_get_current()
+uint16_t BSP_get_motor_current()
 {
 	// 3300: 3.3V ADC reference voltage
 	// 4096: 2^12 bits of resolution
@@ -140,7 +140,7 @@ uint16_t BSP_motor_get_current()
 }
 
 
-uint16_t BSP_analog_in_read(uint8_t channel)
+uint16_t BSP_get_analog_input(uint8_t channel)
 {
 
 	return adc_readings.analog_input[channel];
@@ -151,7 +151,7 @@ uint16_t BSP_analog_in_read(uint8_t channel)
  * With unbuffered output, you have a voltage swing nearly between the rails, and an output impedance of 1 Mega-Ohm.
  * With buffered output, you have 15k output impedance, but reduced swing of up to 200mV at both rails (+200mV .. VRef-200mV
  */
-void BSP_analog_out_set(uint8_t channel, uint8_t value_percent)
+void BSP_set_analog_output(uint8_t channel, uint8_t value_percent)
 {
 	if(value_percent > 100) return;
 	if(channel >= NUM_ANLG_OUT_CHANNELS) return;
@@ -165,7 +165,17 @@ void BSP_analog_out_set(uint8_t channel, uint8_t value_percent)
 }
 
 
-void BSP_pin_interrupt_enable(uint8_t channel, bsp_pin_irq_evt_t evt)
+uint8_t BSP_get_digital_input(uint8_t channel)
+{
+	if(channel > sizeof(input_channel_map)/sizeof(bsp_input_irq_t)) return 0;
+
+	input_channel_map[channel].state = HAL_GPIO_ReadPin(input_channel_map[channel].gpio.port, input_channel_map[channel].gpio.pin);
+
+	return input_channel_map[channel].state;
+}
+
+
+void BSP_enable_interrupt(uint8_t channel, bsp_pin_irq_evt_t evt)
 {
 	if(channel > sizeof(input_channel_map)/sizeof(bsp_input_irq_t)) return;
 
@@ -176,17 +186,11 @@ void BSP_pin_interrupt_enable(uint8_t channel, bsp_pin_irq_evt_t evt)
 }
 
 
-void BSP_pin_interrupt_disable(uint8_t channel)
+void BSP_disable_interrupt(uint8_t channel)
 {
 	if(channel > sizeof(input_channel_map)/sizeof(bsp_input_irq_t)) return;
 
 	input_channel_map[channel].irq_evt = INTERRUPT_NONE;
-}
-
-
-bsp_adc_data_t * BSP_get_adc_readings()
-{
-	return &adc_readings;
 }
 
 

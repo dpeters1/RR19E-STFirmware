@@ -60,7 +60,8 @@ typedef struct {
 } BM78_handler_t;
 /* Public function prototypes */
 void BT_init(UART_HandleTypeDef * uart_bt);
-void BT_power_on(bool turn_on, BM78_mode_t mode);
+void BT_power_on(BM78_mode_t mode);
+void BT_power_off();
 void BT_transmit(uint8_t * buffer, uint16_t len);
 void BT_send_command(uint8_t command, uint8_t * params, uint16_t params_len);
 BM78_state_t BT_get_state();

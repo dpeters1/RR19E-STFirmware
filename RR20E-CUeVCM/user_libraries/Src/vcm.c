@@ -114,13 +114,13 @@ static void VCM_transmit_BT_data(void * handle)
 static void VCM_loop(void * handle)
 {
 	// Update the adc readings
-	vcm_data.input_throttle1 = (uint8_t)(BSP_analog_in_read(ANLG_IN_CH_THROTTLE1) * 100 / 4096);
-	vcm_data.input_throttle2 = (uint8_t)(BSP_analog_in_read(ANLG_IN_CH_THROTTLE2) * 100 / 4096);
-	vcm_data.input_brake = (uint8_t)(BSP_analog_in_read(ANLG_IN_CH_BRAKE) * 100 / 4096);
+	vcm_data.input_throttle1 = (uint8_t)(BSP_get_analog_input(ANLG_IN_CH_THROTTLE1) * 100 / 4096);
+	vcm_data.input_throttle2 = (uint8_t)(BSP_get_analog_input(ANLG_IN_CH_THROTTLE2) * 100 / 4096);
+	vcm_data.input_brake = (uint8_t)(BSP_get_analog_input(ANLG_IN_CH_BRAKE) * 100 / 4096);
 
-	vcm_data.load_current_mc = BSP_load_channel_get_current(LOAD_CH_MC);
-	vcm_data.load_current_bms = BSP_load_channel_get_current(LOAD_CH_BMS);
-	vcm_data.load_current_imd = BSP_load_channel_get_current(LOAD_CH_IMD);
+	vcm_data.load_current_mc = BSP_get_load_current(LOAD_CH_MC);
+	vcm_data.load_current_bms = BSP_get_load_current(LOAD_CH_BMS);
+	vcm_data.load_current_imd = BSP_get_load_current(LOAD_CH_IMD);
 }
 
 void VCM_init()

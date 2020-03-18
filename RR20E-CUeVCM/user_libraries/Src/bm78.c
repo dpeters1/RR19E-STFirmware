@@ -26,7 +26,7 @@ void BT_init(UART_HandleTypeDef * uart_bt){
 
 	bm78.huart = uart_bt;
 
-	BT_power_on(false, MODE_NORMAL);
+	BT_power_off();
 }
 
 
@@ -55,41 +55,53 @@ static void config_status_timeout(void * handle)
 	// No config status received
 	HAL_UART_AbortReceive_IT(bm78.huart);
 
-	BT_power_on(false, MODE_EEPROM);
+	BT_power_off();
 	HAL_Delay(100);
 	// Restart the module in eeprom write mode
-	BT_power_on(true, MODE_EEPROM);
+	BT_power_on(MODE_EEPROM);
 	HAL_Delay(1000);
 
 	eeprom_enable_config_mode();
 
-	BT_power_on(false, MODE_EEPROM);
-	HAL_Delay(100);
+	BT_power_off();
+	HAL_Delay(250);
 	// Restart the module in normal mode
-	BT_power_on(true, MODE_NORMAL);
+	BT_power_on(MODE_NORMAL);
 }
 
-void BT_power_on(bool turn_on, BM78_mode_t mode)
+void BT_power_on(BM78_mode_t mode)
 {
-	GPIO_PinState pin_state = turn_on ? GPIO_PIN_SET : GPIO_PIN_RESET;
-
-	HAL_GPIO_WritePin(BT_SW_BTN_GPIO_Port, BT_SW_BTN_Pin, pin_state);
+	HAL_GPIO_WritePin(BT_SW_BTN_GPIO_Port, BT_SW_BTN_Pin, GPIO_PIN_SET);
 	// Set configuration pins for normal operation
-	HAL_GPIO_WritePin(BT_CFG1_GPIO_Port, BT_CFG1_Pin, pin_state);
+	HAL_GPIO_WritePin(BT_CFG1_GPIO_Port, BT_CFG1_Pin, GPIO_PIN_SET);
 	// P2_0 must be low if in test mode
-	HAL_GPIO_WritePin(BT_CFG2_GPIO_Port, BT_CFG2_Pin, mode == MODE_NORMAL ? pin_state : GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(BT_EAN_GPIO_Port, BT_EAN_Pin, pin_state);
-	HAL_GPIO_WritePin(BT_RST_GPIO_Port, BT_RST_Pin, pin_state);
+	HAL_GPIO_WritePin(BT_CFG2_GPIO_Port, BT_CFG2_Pin, mode == MODE_NORMAL ? GPIO_PIN_SET : GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(BT_EAN_GPIO_Port, BT_EAN_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(BT_RST_GPIO_Port, BT_RST_Pin, GPIO_PIN_SET);
 
-	bm78.state = turn_on ? STATE_POWER_ON : STATE_POWER_OFF;
+	bm78.state = STATE_POWER_ON;
 	bm78.mode = mode;
 
-	if(bm78.state == STATE_POWER_ON && mode == MODE_NORMAL){
+	if(mode == MODE_NORMAL){
 		// If configure mode is enabled, the module will respond with a configure mode status on power up
 		HAL_UART_Receive_IT(bm78.huart, rx_buffer, BM78_UART_CMD_HEADER_SIZE);
 
 		scheduler_add(config_status_timeout, NULL, BM78_CONFIG_MODE_TIMEOUT_MS, 0);
 	}
+}
+
+
+void BT_power_off()
+{
+	HAL_UART_AbortReceive_IT(bm78.huart);
+
+	HAL_GPIO_WritePin(BT_SW_BTN_GPIO_Port, BT_SW_BTN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(BT_CFG1_GPIO_Port, BT_CFG1_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(BT_CFG2_GPIO_Port, BT_CFG2_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(BT_EAN_GPIO_Port, BT_EAN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(BT_RST_GPIO_Port, BT_RST_Pin, GPIO_PIN_RESET);
+
+	bm78.state = STATE_POWER_OFF;
 }
 
 

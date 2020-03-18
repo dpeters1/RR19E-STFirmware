@@ -19,6 +19,11 @@
 #define NUM_ANLG_OUT_CHANNELS   2
 
 typedef enum {
+	LOW,
+	HIGH
+} BSP_bool_t;
+
+typedef enum {
 	MTOR_DIR_FORWARD,
 	MTOR_DIR_BACKWARD
 } bsp_mtor_direction_t;
@@ -71,17 +76,16 @@ typedef struct {
 
 /* Public function prototypes */
 void BSP_init(bsp_handler_t * p_bsp_handler);
-void BSP_fault_led_on(bool on);
-void BSP_buzzer_on(bool on, bsp_buzzer_pitch_t pitch);
-void BSP_load_channel_on(uint8_t channel, bool on);
-uint16_t BSP_load_channel_get_current(uint8_t channel);
-void BSP_pin_interrupt_enable(uint8_t channel, bsp_pin_irq_evt_t evt);
-void BSP_pin_interrupt_disable(uint8_t channel);
-void BSP_analog_out_set(uint8_t channel, uint8_t value_percent);
-bsp_adc_data_t * BSP_get_adc_readings();
-uint16_t BSP_analog_in_read(uint8_t channel);
-void BSP_motor_control(bsp_mtor_direction_t dir, uint8_t duty_cycle);
-uint16_t BSP_motor_get_current();
+void BSP_set_fault_led(BSP_bool_t on);
+void BSP_set_buzzer(BSP_bool_t on, bsp_buzzer_pitch_t pitch);
+void BSP_set_load_output(uint8_t channel, BSP_bool_t on);
+uint16_t BSP_get_load_current(uint8_t channel);
+void BSP_enable_interrupt(uint8_t channel, bsp_pin_irq_evt_t evt);
+void BSP_disable_interrupt(uint8_t channel);
+void BSP_set_analog_output(uint8_t channel, uint8_t value_percent);
+uint16_t BSP_get_analog_input(uint8_t channel);
+void BSP_set_motor_output(bsp_mtor_direction_t dir, uint8_t duty_cycle);
+uint16_t BSP_get_motor_current();
 
 
 #endif /* INC_BSP_H_ */

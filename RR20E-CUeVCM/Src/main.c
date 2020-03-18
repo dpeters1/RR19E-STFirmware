@@ -164,20 +164,20 @@ int main(void)
   BT_init(&huart1);
 
   // Buzzer startup tone
-  BSP_buzzer_on(true, BUZZER_PITCH_LOW);
+  BSP_set_buzzer(HIGH, BUZZER_PITCH_LOW);
   HAL_Delay(250);
-  BSP_buzzer_on(true, BUZZER_PITCH_MED);
+  BSP_set_buzzer(HIGH, BUZZER_PITCH_MED);
   HAL_Delay(250);
-  BSP_buzzer_on(true, BUZZER_PITCH_HIGH);
+  BSP_set_buzzer(HIGH, BUZZER_PITCH_HIGH);
   HAL_Delay(250);
-  BSP_buzzer_on(false, BUZZER_PITCH_HIGH);
+  BSP_set_buzzer(LOW, BUZZER_PITCH_HIGH);
 
-//  BSP_load_channel_on(0, true);
-//  BSP_pin_interrupt_enable(0, INTERRUPT_TOGGLE);
-//  BSP_analog_out_set(0, 25);
-//  BSP_motor_control(MTOR_DIR_FORWARD, 15);
+//  BSP_set_load_output(0, HIGH);
+//  //BSP_enable_interrupt(0, INTERRUPT_TOGGLE);
+//  BSP_set_analog_output(0, 25);
+//  BSP_set_motor_output(MTOR_DIR_FORWARD, 15);
 
-  BT_power_on(true, MODE_NORMAL);
+  BT_power_on(MODE_NORMAL);
 
   BT_enter_setup();
   BT_erase_bonds();
@@ -967,7 +967,7 @@ static void blink_led(void * handle)
 {
 	static bool led_on = false;
 
-	BSP_fault_led_on(led_on);
+	BSP_set_fault_led(led_on ? HIGH : LOW);
 
 	led_on = !led_on;
 }
