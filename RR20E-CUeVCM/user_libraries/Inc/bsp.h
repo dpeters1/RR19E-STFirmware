@@ -80,6 +80,7 @@ void BSP_pin_interrupt_enable(uint8_t channel, bsp_pin_irq_evt_t evt);
 void BSP_pin_interrupt_disable(uint8_t channel);
 void BSP_analog_out_set(uint8_t channel, uint8_t value_percent);
 bsp_adc_data_t * BSP_get_adc_readings();
+uint16_t BSP_analog_in_read(uint8_t channel);
 
 
 #endif /* INC_BSP_H_ */

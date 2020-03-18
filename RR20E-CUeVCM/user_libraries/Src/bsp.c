@@ -118,7 +118,7 @@ uint16_t BSP_motor_get_current()
 uint16_t BSP_analog_in_read(uint8_t channel)
 {
 
-	return 0;
+	return adc_readings.analog_input[channel];
 }
 
 /*

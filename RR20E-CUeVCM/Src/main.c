@@ -26,6 +26,7 @@
 #include "bsp.h"
 #include "scheduler.h"
 #include "bm78.h"
+#include "vcm.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -89,7 +90,7 @@ static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
 extern void initialise_monitor_handles(void);
 void app_pin_irq_handler(uint8_t channel, bsp_pin_irq_evt_t evt);
-void blink_led(void * handle);
+static void blink_led(void * handle);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -185,14 +186,9 @@ int main(void)
   BT_set_pairing_method(PAIR_METHOD_PIN);
   BT_exit_setup();
 
-//  HAL_Delay(600);
-//  BT_send_command(BM78_CMD_READ_LOCAL_INFORMATION, NULL, 0);
+  VCM_init();
 
-//  char test_string[] = "testing\r\n";
-//
-//  BT_transmit((uint8_t *)test_string, strlen(test_string));
-
-  scheduler_add(blink_led, NULL, 0, 200);
+  scheduler_add(blink_led, NULL, 0, 500);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -200,6 +196,7 @@ int main(void)
   while (1)
   {
 	  scheduler_exec();
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -951,7 +948,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef * htim)
 }
 
 
-void blink_led(void * handle)
+static void blink_led(void * handle)
 {
 	static bool led_on = false;
 
@@ -959,6 +956,7 @@ void blink_led(void * handle)
 
 	led_on = !led_on;
 }
+
 /* USER CODE END 4 */
 
 /**
