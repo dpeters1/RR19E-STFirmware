@@ -41,7 +41,7 @@ extern "C" {
 /* USER CODE BEGIN ET */
 
 /* Uncomment when debugging for printf support */
-#define DEBUG
+//#define DEBUG
 
 /* Code snippet to insert in the mx_gpio configuration after re-generating with cubeMX */
 //#ifndef DEBUG

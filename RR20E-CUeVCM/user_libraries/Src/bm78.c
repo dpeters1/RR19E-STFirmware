@@ -248,8 +248,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		else if(bm78.state == STATE_ACCESS_READY){
 
 			if(rx_buffer[rx_buffer_index] == '\n'){
+#ifdef DEBUG
 				printf("%s", rx_buffer);
-
+#endif
 				memset(rx_buffer, 0, rx_buffer_index+1);
 				rx_buffer_index = 0;
 			}

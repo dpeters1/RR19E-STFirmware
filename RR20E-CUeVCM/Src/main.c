@@ -145,7 +145,6 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
-  printd("Fault blink test\n");
 
 #ifndef DEBUG
   HAL_GPIO_WritePin(DBG_LED_GPIO_Port, DBG_LED_Pin, GPIO_PIN_RESET);
@@ -889,6 +888,9 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : LOAD_OUT1_3_Pin LOAD_OUT2_4_Pin LOAD_OUT1_4_Pin */
   GPIO_InitStruct.Pin = LOAD_OUT1_3_Pin|LOAD_OUT2_4_Pin|LOAD_OUT1_4_Pin;
+#ifndef DEBUG
+  GPIO_InitStruct.Pin |= DBG_LED_Pin;
+#endif
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -936,7 +938,9 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void app_pin_irq_handler(uint8_t channel, bsp_pin_irq_evt_t evt)
 {
-	printf("Channel:%d, Event:%d\n", channel, evt);
+#ifdef DEBUG
+	printf("Pin Interrupt-> Channel:%d, Event:%d\n", channel, evt);
+#endif
 }
 
 
