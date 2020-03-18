@@ -178,12 +178,23 @@ int main(void)
   BT_power_on(true, MODE_NORMAL);
 
   while(BT_get_state() != STATE_CONFIGURATION){
-	  ;;
+	  scheduler_exec();
   }
 
   char device_name[] = "CUeVCM BT";
   BT_set_device_name(device_name);
   HAL_Delay(100);
+
+  BT_erase_bonds();
+  HAL_Delay(100);
+
+  char pin[] = "2222";
+  BT_set_pin(pin);
+  HAL_Delay(100);
+
+  BT_set_pairing_method(PAIR_METHOD_PIN);
+  HAL_Delay(100);
+
   BT_send_command(BM78_CMD_LEAVE_CFG_MODE, NULL, 0);
 
 //  HAL_Delay(600);

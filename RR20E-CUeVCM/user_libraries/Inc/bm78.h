@@ -50,7 +50,7 @@ typedef enum{
 
 typedef enum{
 	PAIR_METHOD_PIN,
-	PAIR_METHOD_JUST_WORKS
+	PAIR_METHOD_JUST_WORKS,
 } BM78_pair_method_t;
 
 typedef struct {
@@ -67,6 +67,7 @@ BM78_state_t BT_get_state();
 void BT_set_device_name(char * name);
 void BT_set_pairing_method(BM78_pair_method_t pair_method);
 void BT_set_pin(char * pin_code);
+void BT_erase_bonds();
 //void BT_advertise();
 //void BT_stream(uint8_t * buffer, uint16_t len);
 

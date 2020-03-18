@@ -134,7 +134,13 @@ void BT_set_device_name(char * name)
 	if(strlen(name) > BM78_MAX_ADVERTISING_NAME_SIZE) return;
 
 	uint8_t name_buffer[BM78_MAX_ADVERTISING_NAME_SIZE];
-	name_buffer[0] = 0x01; // Store the name in eeprom
+	name_buffer[0] = 0x00; // Don't store in eeprom
+	/* Note:
+	 * There is an issue with checksums not matching or something, after editing the eeprom to enable
+	 * config mode. (See fn 'eeprom_enable_config_mode()')
+	 * This causes the eeprom preferences to reset to default when any config write commands are
+	 * issued with the eeprom_save flag set. For now, just set the preferences each time
+	 */
 	strcpy((char *)&name_buffer[1], name);
 
 	BT_send_command(BM78_CMD_WRITE_DEVICE_NAME, name_buffer, strlen(name)+1);
@@ -146,7 +152,7 @@ void BT_set_pairing_method(BM78_pair_method_t pair_method)
 	if(bm78.state != STATE_CONFIGURATION) return;
 
 	uint8_t pair_mode_buffer[2];
-	pair_mode_buffer[0] = 0x01;
+	pair_mode_buffer[0] = 0x00;
 	pair_mode_buffer[1] = pair_method;
 
 	BT_send_command(BM78_CMD_WRITE_PAIR_MODE, pair_mode_buffer, sizeof(pair_mode_buffer));
@@ -162,12 +168,19 @@ void BT_set_pin(char * pin_code)
 	if(pin_size != 4 && pin_size != 6) return;
 
 	uint8_t pin_buffer[7];
-	pin_buffer[0] = 0x01;
+	pin_buffer[0] = 0x00;
 	strcpy((char *)&pin_buffer[1], pin_code);
 
 	BT_send_command(BM78_CMD_WRITE_PIN_CODE, pin_buffer, pin_size+1);
 }
 
+
+void BT_erase_bonds()
+{
+	if(bm78.state != STATE_CONFIGURATION) return;
+
+	BT_send_command(BM78_CMD_ERASE_PAIR_INFO, NULL, 0);
+}
 
 static void config_response_handler(uint8_t * msg, uint16_t len)
 {
