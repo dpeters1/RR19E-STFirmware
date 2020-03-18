@@ -38,8 +38,15 @@ void BSP_init(bsp_handler_t * p_bsp_handler)
 		HAL_ADC_Start_DMA(bsp->adc_csense, adc_readings.load_current, OUTPUT_BANK_SIZE+1);
 	}
 
+	// Initialize the  analog outputs to zero
 	BSP_analog_out_set(0, 0);
 	BSP_analog_out_set(1, 0);
+
+	// Turn off the buzzer
+	BSP_buzzer_on(false, BUZZER_PITCH_MED);
+
+	// Set the motor output to zero
+	BSP_motor_control(MTOR_DIR_FORWARD, 0);
 }
 
 void BSP_fault_led_on(bool on)
@@ -50,6 +57,8 @@ void BSP_fault_led_on(bool on)
 
 void BSP_buzzer_on(bool on, bsp_buzzer_pitch_t pitch)
 {
+	if(bsp->tim_buzzer == NULL) return;
+
 	if(on){
 		HAL_TIM_Base_DeInit(bsp->tim_buzzer);
 
@@ -99,9 +108,25 @@ uint16_t BSP_load_channel_get_current(uint8_t channel)
 }
 
 
-void BSP_motor_control(bsp_mtor_side_t side, int8_t duty_cycle)
+void BSP_motor_control(bsp_mtor_direction_t dir, uint8_t duty_cycle)
 {
+	if(bsp->tim_motor == NULL) return;
+	if(duty_cycle > 100) return;
 
+	HAL_GPIO_WritePin(MTOR_CSENSE_SEL_GPIO_Port, MTOR_CSENSE_SEL_Pin, dir ? GPIO_PIN_RESET : GPIO_PIN_SET);
+
+	HAL_GPIO_WritePin(MOTOR_CTRL_A_GPIO_Port, MOTOR_CTRL_A_Pin, dir ? GPIO_PIN_RESET : GPIO_PIN_SET);
+	HAL_GPIO_WritePin(MOTOR_CTRL_B_GPIO_Port, MOTOR_CTRL_B_Pin, dir ? GPIO_PIN_SET : GPIO_PIN_RESET);
+
+	TIM_OC_InitTypeDef sConfigOC;
+	sConfigOC.OCMode = TIM_OCMODE_PWM1;
+	sConfigOC.Pulse = duty_cycle;
+	sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+	sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+
+	HAL_TIM_PWM_ConfigChannel(bsp->tim_motor, &sConfigOC, TIM_CHANNEL_1);
+
+	HAL_TIM_PWM_Start(bsp->tim_motor, TIM_CHANNEL_1);
 }
 
 

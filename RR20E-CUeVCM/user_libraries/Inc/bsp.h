@@ -19,10 +19,9 @@
 #define NUM_ANLG_OUT_CHANNELS   2
 
 typedef enum {
-	MTOR_SIDE_HALF_A,
-	MTOR_SIDE_HALF_B,
-	MTOR_SIDE_FULL
-} bsp_mtor_side_t;
+	MTOR_DIR_FORWARD,
+	MTOR_DIR_BACKWARD
+} bsp_mtor_direction_t;
 
 typedef enum{
 	BUZZER_PITCH_LOW,
@@ -81,6 +80,8 @@ void BSP_pin_interrupt_disable(uint8_t channel);
 void BSP_analog_out_set(uint8_t channel, uint8_t value_percent);
 bsp_adc_data_t * BSP_get_adc_readings();
 uint16_t BSP_analog_in_read(uint8_t channel);
+void BSP_motor_control(bsp_mtor_direction_t dir, uint8_t duty_cycle);
+uint16_t BSP_motor_get_current();
 
 
 #endif /* INC_BSP_H_ */
