@@ -13,9 +13,9 @@
 #include "stm32f4xx_hal.h"
 
 
-#define BM78_COMMAND_BUFFER_SIZE	200
-#define BM78_UART_SYNC_WORD			0xAA
-#define BM78_UART_CMD_HEADER_SIZE	3
+#define BM78_COMMAND_BUFFER_SIZE		200
+#define BM78_UART_SYNC_WORD				0xAA
+#define BM78_UART_CMD_HEADER_SIZE		3
 #define BM78_CONFIG_MODE_TIMEOUT_MS		3000
 #define BM78_MAX_ADVERTISING_NAME_SIZE	20
 
@@ -71,7 +71,5 @@ void BT_set_pin(char * pin_code);
 void BT_erase_bonds();
 void BT_enter_setup();
 void BT_exit_setup();
-//void BT_advertise();
-//void BT_stream(uint8_t * buffer, uint16_t len);
 
 #endif /* INC_BM78_H_ */

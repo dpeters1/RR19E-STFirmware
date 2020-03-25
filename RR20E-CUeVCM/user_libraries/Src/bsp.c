@@ -43,7 +43,7 @@ void BSP_init(bsp_handler_t * p_bsp_handler)
 	BSP_set_analog_output(1, 0);
 
 	// Turn off the buzzer
-	BSP_set_buzzer(LOW, BUZZER_PITCH_MED);
+	BSP_set_buzzer(BUZZER_OFF);
 
 	// Set the motor output to zero
 	BSP_set_motor_output(MTOR_DIR_FORWARD, 0);
@@ -55,31 +55,30 @@ void BSP_set_fault_led(BSP_bool_t on)
 }
 
 
-void BSP_set_buzzer(BSP_bool_t on, bsp_buzzer_pitch_t pitch)
+void BSP_set_buzzer(bsp_buzzer_noise_t noise)
 {
 	if(bsp->tim_buzzer == NULL) return;
 
-	if(on){
-		HAL_TIM_Base_DeInit(bsp->tim_buzzer);
-
-		switch(pitch){
-		case BUZZER_PITCH_LOW:
-			bsp->tim_buzzer->Init.Prescaler = 500-1;
-			break;
-		case BUZZER_PITCH_MED:
-				bsp->tim_buzzer->Init.Prescaler = 450-1;
-				break;
-		case BUZZER_PITCH_HIGH:
-				bsp->tim_buzzer->Init.Prescaler = 400-1;
-				break;
-		}
-
-		HAL_TIM_Base_Init(bsp->tim_buzzer);
+	switch(noise){
+	case BUZZER_OFF:
+		break;
+	case BUZZER_PITCH_LOW:
+		bsp->tim_buzzer->Init.Prescaler = 500-1;
+		break;
+	case BUZZER_PITCH_MED:
+		bsp->tim_buzzer->Init.Prescaler = 450-1;
+		break;
+	case BUZZER_PITCH_HIGH:
+		bsp->tim_buzzer->Init.Prescaler = 400-1;
+		break;
 	}
+
+	HAL_TIM_Base_DeInit(bsp->tim_buzzer);
+	HAL_TIM_Base_Init(bsp->tim_buzzer);
 
 	TIM_OC_InitTypeDef sConfigOC;
 	sConfigOC.OCMode = TIM_OCMODE_PWM1;
-	sConfigOC.Pulse = on ? 50:0;
+	sConfigOC.Pulse = noise == BUZZER_OFF ? 0 : 50;
 	sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
 	sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 
@@ -151,14 +150,14 @@ uint16_t BSP_get_analog_input(uint8_t channel)
  * With unbuffered output, you have a voltage swing nearly between the rails, and an output impedance of 1 Mega-Ohm.
  * With buffered output, you have 15k output impedance, but reduced swing of up to 200mV at both rails (+200mV .. VRef-200mV
  */
-void BSP_set_analog_output(uint8_t channel, uint8_t value_percent)
+void BSP_set_analog_output(uint8_t channel, uint16_t value_12b)
 {
-	if(value_percent > 100) return;
+	if(value_12b > 4095) return;
 	if(channel >= NUM_ANLG_OUT_CHANNELS) return;
 	if(bsp->dac_anlg_out == NULL) return;
 
 	uint32_t dac_channel = channel ? DAC_CHANNEL_2 : DAC_CHANNEL_1;
-	uint32_t dac_value = value_percent * (4096/100);
+	uint32_t dac_value = value_12b;
 
 	HAL_DAC_SetValue(bsp->dac_anlg_out, dac_channel, DAC_ALIGN_12B_R, dac_value);
 	HAL_DAC_Start(bsp->dac_anlg_out, dac_channel);

@@ -161,21 +161,21 @@ int main(void)
   vcm.app_pin_irq_handler = app_pin_irq_handler;
   BSP_init(&vcm);
 
-  BT_init(&huart1);
-
   // Buzzer startup tone
-  BSP_set_buzzer(HIGH, BUZZER_PITCH_LOW);
+  BSP_set_buzzer(BUZZER_PITCH_LOW);
   HAL_Delay(250);
-  BSP_set_buzzer(HIGH, BUZZER_PITCH_MED);
+  BSP_set_buzzer(BUZZER_PITCH_MED);
   HAL_Delay(250);
-  BSP_set_buzzer(HIGH, BUZZER_PITCH_HIGH);
+  BSP_set_buzzer(BUZZER_PITCH_HIGH);
   HAL_Delay(250);
-  BSP_set_buzzer(LOW, BUZZER_PITCH_HIGH);
+  BSP_set_buzzer(BUZZER_OFF);
 
 //  BSP_set_load_output(0, HIGH);
 //  //BSP_enable_interrupt(0, INTERRUPT_TOGGLE);
-//  BSP_set_analog_output(0, 25);
+//  BSP_set_analog_output(0, 2048);
 //  BSP_set_motor_output(MTOR_DIR_FORWARD, 15);
+
+  BT_init(&huart1);
 
   BT_power_on(MODE_NORMAL);
 

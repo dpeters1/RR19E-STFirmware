@@ -29,10 +29,11 @@ typedef enum {
 } bsp_mtor_direction_t;
 
 typedef enum{
+	BUZZER_OFF,
 	BUZZER_PITCH_LOW,
 	BUZZER_PITCH_MED,
 	BUZZER_PITCH_HIGH
-} bsp_buzzer_pitch_t;
+} bsp_buzzer_noise_t;
 
 typedef enum {
 	INTERRUPT_NONE,
@@ -77,12 +78,12 @@ typedef struct {
 /* Public function prototypes */
 void BSP_init(bsp_handler_t * p_bsp_handler);
 void BSP_set_fault_led(BSP_bool_t on);
-void BSP_set_buzzer(BSP_bool_t on, bsp_buzzer_pitch_t pitch);
+void BSP_set_buzzer(bsp_buzzer_noise_t noise);
 void BSP_set_load_output(uint8_t channel, BSP_bool_t on);
 uint16_t BSP_get_load_current(uint8_t channel);
 void BSP_enable_interrupt(uint8_t channel, bsp_pin_irq_evt_t evt);
 void BSP_disable_interrupt(uint8_t channel);
-void BSP_set_analog_output(uint8_t channel, uint8_t value_percent);
+void BSP_set_analog_output(uint8_t channel, uint16_t value_12b);
 uint16_t BSP_get_analog_input(uint8_t channel);
 void BSP_set_motor_output(bsp_mtor_direction_t dir, uint8_t duty_cycle);
 uint16_t BSP_get_motor_current();
